@@ -1,0 +1,152 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Notification Lab</title>
+<meta name="description" content="A simulation of push-notification fatigue for a community app: one person's first month, push by push, and a data-backed recommendation for daily send volume and content.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="name">Notification Lab</span>
+  </div>
+  <span class="chip">Concept demo · simulated data · not affiliated with Reddit</span>
+</header>
+
+<section class="hero">
+  <p class="eyebrow">Growth · notifications · community apps</p>
+  <h1>Fewer, more personal pushes keep the channel open</h1>
+  <p class="thesis">A push that gets ignored is not free. It spends a little of the user's patience, and once that runs out they mute you or turn push off for good. This lab simulates thousands of people over 180 days, follows one of them through their first month, and recommends how many notifications to send each day and which ones.</p>
+
+  <div class="persona-pick" role="tablist" aria-label="Who is this person">
+    <button type="button" role="tab" data-persona="minimalist" id="tab-minimalist">Notification minimalist</button>
+    <button type="button" role="tab" data-persona="casual" id="tab-casual">Casual browser</button>
+    <button type="button" role="tab" data-persona="contributor" id="tab-contributor">Active contributor</button>
+  </div>
+  <p class="persona-blurb" id="persona-blurb">Loading…</p>
+
+  <div class="kpis" id="kpis" aria-live="polite"></div>
+</section>
+
+<section class="block" id="lived">
+  <div class="block-head">
+    <div>
+      <p class="eyebrow">01 · Lived experience</p>
+      <h2>One person, first 30 days</h2>
+      <p class="sub">The same kind of person under two policies. Left: today's default, the top five candidates every day. Right: the recommended policy. Pick a day or press play.</p>
+    </div>
+  </div>
+
+  <div class="player">
+    <button type="button" class="btn" id="play" aria-label="Play the month">▶ Play</button>
+    <label class="day-label" for="day">Day <span id="day-v">1</span> of 30</label>
+    <input type="range" id="day" min="1" max="30" value="1">
+  </div>
+
+  <div class="phones">
+    <figure class="phone-col" id="col-status_quo">
+      <figcaption><span class="dot sq"></span><span class="pol-name">Today's default</span><span class="pol-sub" id="sub-status_quo"></span></figcaption>
+      <div class="phone"><div class="screen" id="screen-status_quo"></div></div>
+      <div class="meter"><span>Patience used</span><div class="bar"><i id="fat-status_quo"></i></div></div>
+      <div class="strip" id="strip-status_quo" aria-label="30-day overview"></div>
+      <p class="tally" id="tally-status_quo"></p>
+    </figure>
+
+    <figure class="phone-col" id="col-recommended">
+      <figcaption><span class="dot rec"></span><span class="pol-name">Recommended</span><span class="pol-sub" id="sub-recommended"></span></figcaption>
+      <div class="phone"><div class="screen" id="screen-recommended"></div></div>
+      <div class="meter"><span>Patience used</span><div class="bar"><i id="fat-recommended"></i></div></div>
+      <div class="strip" id="strip-recommended" aria-label="30-day overview"></div>
+      <p class="tally" id="tally-recommended"></p>
+    </figure>
+
+    <aside class="note">
+      <p class="eyebrow">Field note · one real month</p>
+      <blockquote>
+        <p>I turn off notifications for almost every app. After a conversation about Reddit's notifications in September, I kept Reddit's on for a month.</p>
+        <p>The frequency was high. I could put my phone on Do Not Disturb during work, but some days it still felt like too much.</p>
+        <p>It made the balance concrete for me: a notification has to feel personal enough to be worth opening, or it becomes one more interruption.</p>
+      </blockquote>
+      <p class="by">Chloe Tan · Sept–Oct 2026. The "Notification minimalist" profile is modeled on this.</p>
+      <div class="pop" id="pop"></div>
+    </aside>
+  </div>
+</section>
+
+<section class="block" id="volume">
+  <div class="block-head">
+    <div>
+      <p class="eyebrow">02 · Recommendation</p>
+      <h2>How many pushes a day</h2>
+      <p class="sub" id="vol-sub"></p>
+    </div>
+    <div class="rec-card" id="rec-card"></div>
+  </div>
+  <div class="legend">
+    <span><i class="sw rec"></i>Fatigue-aware (best relevance bar at each cap)</span>
+    <span><i class="sw sq"></i>Volume-first</span>
+    <span><i class="ci"></i>95% interval</span>
+  </div>
+  <div class="scroll"><svg id="chart-volume" viewBox="0 0 860 300" role="img" aria-label="Extra active days per user over 180 days, by daily cap"></svg></div>
+  <div class="valid" id="valid"></div>
+</section>
+
+<section class="block" id="content">
+  <div class="block-head">
+    <div>
+      <p class="eyebrow">03 · Recommendation</p>
+      <h2>Which pushes to send</h2>
+      <p class="sub">Share of all pushes by type, today's default against the recommended policy. The rule column comes from switching each type off in turn and measuring the change in extra active days.</p>
+    </div>
+  </div>
+  <div class="scroll"><table class="mix" id="mix"></table></div>
+  <p class="foot-note" id="mix-note"></p>
+</section>
+
+<section class="block" id="longrun">
+  <div class="block-head">
+    <div>
+      <p class="eyebrow">04 · Six months</p>
+      <h2>What the first month hides</h2>
+      <p class="sub">Push permission only goes one way. Every point lost here caps every campaign that comes after it.</p>
+    </div>
+  </div>
+  <div class="two">
+    <div>
+      <h3>Push permission still on</h3>
+      <div class="scroll"><svg id="chart-perm" viewBox="0 0 520 240" role="img" aria-label="Share of users with push on over 180 days"></svg></div>
+    </div>
+    <div>
+      <h3>Extra daily actives vs. no pushes</h3>
+      <div class="scroll"><svg id="chart-dau" viewBox="0 0 520 240" role="img" aria-label="Incremental daily active users over 180 days"></svg></div>
+    </div>
+  </div>
+</section>
+
+<section class="block method" id="method">
+  <div class="block-head">
+    <div>
+      <p class="eyebrow">05 · Method and data</p>
+      <h2>How the numbers are made</h2>
+    </div>
+  </div>
+  <div class="steps">
+    <div><b>Supply</b><p>Each day a person gets candidates: replies to their posts and comments (in proportion to how much they contribute), upvote milestones, trending posts from joined communities, a digest, recommendations and community suggestions.</p></div>
+    <div><b>Select</b><p>Volume-first sends the top <i>cap</i> by relevance. Fatigue-aware subtracts an irritation cost that grows with fatigue, shrinks the cap as fatigue rises, and skips anything below a relevance bar.</p></div>
+    <div><b>Respond</b><p>Open probability = relevance × (1 − fatigue) × the person's willingness. Opens lower fatigue; ignores raise it. Past the person's threshold, the rest of the day is Do Not Disturb. Fatigue also makes unprompted visits less likely; recent opens make them more likely.</p></div>
+    <div><b>Burn</b><p>Each day there is a small chance, growing with fatigue², that the person turns push off. It never comes back. Lift is measured against the same person with no pushes.</p></div>
+  </div>
+  <div class="data-list" id="data-list"></div>
+  <p class="foot-note">The optimiser searches every ceiling and relevance bar on one cohort, breaks ties toward the policy that keeps more people reachable, and reports results on a second cohort it never saw. All data is simulated. Parameters are illustrative, not fitted to any company's logs. The point is the mechanism: calibrate against a real holdout before trusting any number. Source, generator and tests are in the <a href="https://github.com/chloe4ai/notification-lab">repository</a>.</p>
+</section>
+
+<footer class="foot">
+  <span>Notification Lab · Chloe Tan · October 2026</span>
+  <span id="gen-at"></span>
+</footer>
+</div>
+<script src="js/app.js"></script>
+
+</body></html>
