@@ -7,39 +7,48 @@
 <meta name="description" content="A simulation of push-notification fatigue for a community app: one person's first month, push by push, and a data-backed recommendation for daily send volume and content.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<div class="wrap">
-
-<header class="top">
-  <div class="brand">
-    <span class="mark" aria-hidden="true"></span>
-    <span class="name">Notification Lab</span>
-  </div>
+<nav class="nav">
+  <a class="brand" href="#top" aria-label="Notification Lab">
+    <svg class="snoo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#FF4500"/><ellipse cx="12" cy="14" rx="7" ry="5" fill="#fff"/><circle cx="9.3" cy="13.4" r="1.2" fill="#FF4500"/><circle cx="14.7" cy="13.4" r="1.2" fill="#FF4500"/><path d="M9.5 16.2c1.5 1 3.5 1 5 0" stroke="#FF4500" stroke-width=".9" fill="none" stroke-linecap="round"/><circle cx="17.6" cy="6.4" r="1.6" fill="#fff"/><path d="M12 8.6l1.2-3.6 3.2.9" stroke="#fff" stroke-width=".9" fill="none" stroke-linecap="round"/></svg>
+    <span class="name">notification<b>lab</b></span>
+  </a>
+  <div class="crumb"><span>r/NotificationLab</span></div>
   <span class="chip">Concept demo · simulated data · not affiliated with Reddit</span>
-</header>
+</nav>
 
-<section class="hero">
-  <p class="eyebrow">Growth · notifications · community apps</p>
-  <h1>Fewer, more personal pushes keep the channel open</h1>
-  <p class="thesis">A push that gets ignored is not free. It spends a little of the user's patience, and once that runs out they mute you or turn push off for good. This lab simulates thousands of people over 180 days, follows one of them through their first month, and recommends how many notifications to send each day and which ones.</p>
+<div class="wrap" id="top">
+<div class="layout">
+<main class="feed">
 
-  <div class="persona-pick" role="tablist" aria-label="Who is this person">
-    <button type="button" role="tab" data-persona="minimalist" id="tab-minimalist">Notification minimalist</button>
-    <button type="button" role="tab" data-persona="casual" id="tab-casual">Casual browser</button>
-    <button type="button" role="tab" data-persona="contributor" id="tab-contributor">Active contributor</button>
+<article class="post hero">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>00</b><i class="dn">▼</i></div>
+  <div class="post-main">
+    <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · Posted by u/chloe4ai · Oct 2026 <span class="flair">Growth · notifications</span></p>
+    <h1>Fewer, more personal pushes keep the channel open</h1>
+    <p class="thesis">A push that gets ignored is not free. It spends a little of the user's patience, and once that runs out they mute you or turn push off for good. This lab simulates thousands of people over 180 days, follows one of them through their first month, and recommends how many notifications to send each day and which ones.</p>
+
+    <div class="persona-pick" role="tablist" aria-label="Who is this person">
+      <span class="sort-label">Persona</span>
+      <button type="button" role="tab" data-persona="minimalist" id="tab-minimalist">Notification minimalist</button>
+      <button type="button" role="tab" data-persona="casual" id="tab-casual">Casual browser</button>
+      <button type="button" role="tab" data-persona="contributor" id="tab-contributor">Active contributor</button>
+    </div>
+    <p class="persona-blurb" id="persona-blurb">Loading…</p>
+
+    <div class="kpis" id="kpis" aria-live="polite"></div>
   </div>
-  <p class="persona-blurb" id="persona-blurb">Loading…</p>
+</article>
 
-  <div class="kpis" id="kpis" aria-live="polite"></div>
-</section>
-
-<section class="block" id="lived">
+<article class="post block" id="lived">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>01</b><i class="dn">▼</i></div>
+  <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="eyebrow">01 · Lived experience</p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">01 · Lived experience</span></p>
       <h2>One person, first 30 days</h2>
       <p class="sub">The same kind of person under two policies. Left: today's default, the top five candidates every day. Right: the recommended policy. Pick a day or press play.</p>
     </div>
@@ -79,12 +88,16 @@
       <div class="pop" id="pop"></div>
     </aside>
   </div>
-</section>
+  <div class="actions"><a href="#lived">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
 
-<section class="block" id="volume">
+<article class="post block" id="volume">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>02</b><i class="dn">▼</i></div>
+  <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="eyebrow">02 · Recommendation</p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">02 · Recommendation</span></p>
       <h2>How many pushes a day</h2>
       <p class="sub" id="vol-sub"></p>
     </div>
@@ -97,24 +110,32 @@
   </div>
   <div class="scroll"><svg id="chart-volume" viewBox="0 0 860 300" role="img" aria-label="Extra active days per user over 180 days, by daily cap"></svg></div>
   <div class="valid" id="valid"></div>
-</section>
+  <div class="actions"><a href="#volume">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
 
-<section class="block" id="content">
+<article class="post block" id="content">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>03</b><i class="dn">▼</i></div>
+  <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="eyebrow">03 · Recommendation</p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">03 · Recommendation</span></p>
       <h2>Which pushes to send</h2>
       <p class="sub">Share of all pushes by type, today's default against the recommended policy. The rule column comes from switching each type off in turn and measuring the change in extra active days.</p>
     </div>
   </div>
   <div class="scroll"><table class="mix" id="mix"></table></div>
   <p class="foot-note" id="mix-note"></p>
-</section>
+  <div class="actions"><a href="#content">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
 
-<section class="block" id="longrun">
+<article class="post block" id="longrun">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>04</b><i class="dn">▼</i></div>
+  <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="eyebrow">04 · Six months</p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">04 · Six months</span></p>
       <h2>What the first month hides</h2>
       <p class="sub">Push permission only goes one way. Every point lost here caps every campaign that comes after it.</p>
     </div>
@@ -129,12 +150,16 @@
       <div class="scroll"><svg id="chart-dau" viewBox="0 0 520 240" role="img" aria-label="Incremental daily active users over 180 days"></svg></div>
     </div>
   </div>
-</section>
+  <div class="actions"><a href="#longrun">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
 
-<section class="block method" id="method">
+<article class="post block method" id="method">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>05</b><i class="dn">▼</i></div>
+  <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="eyebrow">05 · Method and data</p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">05 · Method and data</span></p>
       <h2>How the numbers are made</h2>
     </div>
   </div>
@@ -146,7 +171,33 @@
   </div>
   <div class="data-list" id="data-list"></div>
   <p class="foot-note">The optimiser searches every ceiling and relevance bar on one cohort, breaks ties toward the policy that keeps more people reachable, and reports results on a second cohort it never saw. All data is simulated. Parameters are illustrative, not fitted to any company's logs. The point is the mechanism: calibrate against a real holdout before trusting any number. Source, generator and tests are in the <a href="https://github.com/chloe4ai/notification-lab">repository</a>.</p>
-</section>
+  <div class="actions"><a href="#method">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
+
+</main>
+
+<aside class="side">
+  <div class="card about">
+    <div class="about-head">About Community</div>
+    <div class="about-body">
+      <p>A push-notification fatigue simulator for a community app. Thousands of simulated people, 180 days, two policies.</p>
+      <div class="about-stats"><div><b>180</b><span>days</span></div><div><b>3</b><span>personas</span></div><div><b>2</b><span>policies</span></div></div>
+      <a class="join" href="https://github.com/chloe4ai/notification-lab">View on GitHub</a>
+    </div>
+  </div>
+  <div class="card toc">
+    <div class="card-head">Posts in this lab</div>
+    <ol>
+      <li><a href="#lived"><span>01</span>One person, first 30 days</a></li>
+      <li><a href="#volume"><span>02</span>How many pushes a day</a></li>
+      <li><a href="#content"><span>03</span>Which pushes to send</a></li>
+      <li><a href="#longrun"><span>04</span>What the first month hides</a></li>
+      <li><a href="#method"><span>05</span>How the numbers are made</a></li>
+    </ol>
+  </div>
+</aside>
+</div>
 
 <footer class="foot">
   <span>Notification Lab · Chloe Tan · October 2026</span>
