@@ -43,14 +43,52 @@
   </div>
 </article>
 
-<article class="post block" id="lived">
+<article class="post block" id="dashboard">
   <div class="votes" aria-hidden="true"><i class="up">▲</i><b>01</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">01 · Lived experience</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">01 · Dashboard</span></p>
+      <h2>Metrics dashboard</h2>
+      <p class="sub">Every headline number for the selected persona, today's default against the recommended policy, measured on the validation cohort over 180 days. Hover a tile for its definition.</p>
+    </div>
+  </div>
+
+  <div class="tiles" id="tiles" aria-live="polite"></div>
+
+  <div class="two dash-row">
+    <div>
+      <h3>Cumulative extra active days</h3>
+      <p class="chart-note" id="cum-note"></p>
+      <div class="legend"><span><i class="sw sq"></i>Today's default</span><span><i class="sw rec"></i>Recommended</span></div>
+      <div class="scroll"><svg id="chart-cum" viewBox="0 0 520 240" role="img" aria-label="Cumulative extra active days per user over 180 days"></svg></div>
+    </div>
+    <div>
+      <h3>Where the optimiser looked</h3>
+      <p class="chart-note" id="heat-note"></p>
+      <div class="scroll"><svg id="chart-heat" viewBox="0 0 520 240" role="img" aria-label="Extra active days by daily cap and relevance bar"></svg></div>
+    </div>
+  </div>
+
+  <h3 class="mt">Mechanism or just less volume?</h3>
+  <p class="sub" id="mech-note"></p>
+  <div class="scroll"><table class="mix cmp" id="cmp"></table></div>
+
+  <h3 class="mt">All three personas side by side</h3>
+  <div class="scroll"><table class="mix allp" id="allp"></table></div>
+  <p class="foot-note">Lift is extra active days per user versus the same person receiving no pushes. Reach days is the area under the push-permission curve: how many of the 180 days the average person could still be reached. Pushes per extra active day is the cost of one unit of lift. ± is a 95% interval.</p>
+  <div class="actions"><a href="#dashboard">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
+
+<article class="post block" id="lived">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>02</b><i class="dn">▼</i></div>
+  <div class="post-main">
+  <div class="block-head">
+    <div>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">02 · Lived experience</span></p>
       <h2>One person, first 30 days</h2>
-      <p class="sub">The same kind of person under two policies. Left: today's default, the top five candidates every day. Right: the recommended policy. Pick a day or press play.</p>
+      <p class="sub">The same kind of person under two policies. First, today's default: the top five candidates every day. Then the recommended policy. Pick a day or press play.</p>
     </div>
   </div>
 
@@ -93,11 +131,11 @@
 </article>
 
 <article class="post block" id="volume">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>02</b><i class="dn">▼</i></div>
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>03</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">02 · Recommendation</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">03 · Recommendation</span></p>
       <h2>How many pushes a day</h2>
       <p class="sub" id="vol-sub"></p>
     </div>
@@ -115,11 +153,11 @@
 </article>
 
 <article class="post block" id="content">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>03</b><i class="dn">▼</i></div>
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>04</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">03 · Recommendation</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">04 · Recommendation</span></p>
       <h2>Which pushes to send</h2>
       <p class="sub">Share of all pushes by type, today's default against the recommended policy. The rule column comes from switching each type off in turn and measuring the change in extra active days.</p>
     </div>
@@ -131,15 +169,16 @@
 </article>
 
 <article class="post block" id="longrun">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>04</b><i class="dn">▼</i></div>
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>05</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">04 · Six months</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">05 · Six months</span></p>
       <h2>What the first month hides</h2>
       <p class="sub">Push permission only goes one way. Every point lost here caps every campaign that comes after it.</p>
     </div>
   </div>
+  <div class="legend"><span><i class="sw sq"></i>Today's default</span><span><i class="sw rec"></i>Recommended</span></div>
   <div class="two">
     <div>
       <h3>Push permission still on</h3>
@@ -150,16 +189,18 @@
       <div class="scroll"><svg id="chart-dau" viewBox="0 0 520 240" role="img" aria-label="Incremental daily active users over 180 days"></svg></div>
     </div>
   </div>
+  <div class="scroll"><table class="mix d30" id="d30"></table></div>
+  <p class="foot-note" id="d30-note"></p>
   <div class="actions"><a href="#longrun">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
   </div>
 </article>
 
 <article class="post block method" id="method">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>05</b><i class="dn">▼</i></div>
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>06</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">05 · Method and data</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">06 · Method and data</span></p>
       <h2>How the numbers are made</h2>
     </div>
   </div>
@@ -189,12 +230,23 @@
   <div class="card toc">
     <div class="card-head">Posts in this lab</div>
     <ol>
-      <li><a href="#lived"><span>01</span>One person, first 30 days</a></li>
-      <li><a href="#volume"><span>02</span>How many pushes a day</a></li>
-      <li><a href="#content"><span>03</span>Which pushes to send</a></li>
-      <li><a href="#longrun"><span>04</span>What the first month hides</a></li>
-      <li><a href="#method"><span>05</span>How the numbers are made</a></li>
+      <li><a href="#dashboard"><span>01</span>Metrics dashboard</a></li>
+      <li><a href="#lived"><span>02</span>One person, first 30 days</a></li>
+      <li><a href="#volume"><span>03</span>How many pushes a day</a></li>
+      <li><a href="#content"><span>04</span>Which pushes to send</a></li>
+      <li><a href="#longrun"><span>05</span>What the first month hides</a></li>
+      <li><a href="#method"><span>06</span>How the numbers are made</a></li>
     </ol>
+  </div>
+  <div class="card gloss">
+    <div class="card-head">How to read the numbers</div>
+    <dl>
+      <dt>Extra active days (lift)</dt><dd>Days a person was active that they would not have been without pushes. Same person, same random draws, no pushes.</dd>
+      <dt>Push on</dt><dd>Share of people who have not turned push off. It never comes back.</dd>
+      <dt>Reach days</dt><dd>Of 180 days, how many the average person could still be reached.</dd>
+      <dt>DND days</dt><dd>Days the person silenced the rest of the day after too many ignored pushes.</dd>
+      <dt>Relevance bar</dt><dd>Minimum score, after the fatigue cost, a push needs to be sent.</dd>
+    </dl>
   </div>
 </aside>
 </div>
@@ -204,6 +256,7 @@
   <span id="gen-at"></span>
 </footer>
 </div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
 <script src="js/app.js"></script>
 </body>
 </html>

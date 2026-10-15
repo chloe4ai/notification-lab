@@ -41,6 +41,24 @@
       if (D.meta.personas[h] && h !== S.persona) { S.persona = h; S.day = 1; stop(); renderAll(); }
     });
   }
+  /* ---------- shared hover tooltip: any element with data-tip ---------- */
+  const tip = $("tip");
+  document.addEventListener("mousemove", (e) => {
+    const t = e.target.closest && e.target.closest("[data-tip]");
+    if (!t) { tip.hidden = true; return; }
+    tip.innerHTML = t.dataset.tip; tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = e.clientX + 14, y = e.clientY + 14;
+    if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+    if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  });
+  document.addEventListener("mouseleave", () => (tip.hidden = true));
+  document.addEventListener("scroll", () => (tip.hidden = true), { passive: true });
+  const PN = { minimalist: "Notification minimalist", casual: "Casual browser", contributor: "Active contributor" };
+  const cum = (arr) => { let a = 0; return arr.map((v) => (a += v / 100)); };
+  const reach = (arr) => arr.reduce((a, b) => a + b, 0);
+
   function play() {
     if (S.day >= 30) S.day = 0;
     $("play").textContent = "❚❚ Pause";
@@ -57,7 +75,7 @@
     $("persona-blurb").textContent = p.blurb;
     $("gen-at").textContent = "Data generated " + D.meta.generated_at.replace("T", " ").replace("+00:00", " UTC");
     $("day").value = S.day;
-    renderKpis(); renderLivedStatic(); renderDay(); renderVolume(); renderMix(); renderCharts(); renderData();
+    renderKpis(); renderDashboard(); renderLivedStatic(); renderDay(); renderVolume(); renderMix(); renderLongrun(); renderCharts(); renderData();
   }
 
   /* ---------- KPIs ---------- */
@@ -144,6 +162,107 @@
     });
   }
 
+
+  /* ---------- Dashboard ---------- */
+  function renderDashboard() {
+    const R = D.recs[S.persona], v = R.validation, sq = v.status_quo, rc = v.recommended, bv = v.best_volume_first;
+    const C = D.cohort[S.persona], days = D.meta.horizon_days;
+    const rSq = reach(C.status_quo.push_on), rRc = reach(C.recommended.push_on);
+    const opens = (x) => x.sends_per_user_day * days * x.open_rate;
+    const cost = (x) => (x.sends_per_user_day * days) / Math.max(0.01, x.incremental_active_days);
+    const T = [
+      ["Pushes per day", fmt(sq.sends_per_user_day, 2), fmt(rc.sends_per_user_day, 2), "lower", "Average pushes sent per person per day, including days after they turned push off (zero)."],
+      ["Extra active days", "+" + fmt(sq.incremental_active_days), "+" + fmt(rc.incremental_active_days), "higher", `Lift versus the same person with no pushes, over ${days} days. ± ${fmt(sq.ci95)} and ± ${fmt(rc.ci95)} (95%).`],
+      ["Open rate", pct(sq.open_rate), pct(rc.open_rate), "higher", "Opened pushes ÷ pushes sent. Silenced pushes count as sent and not opened."],
+      [`Opens per person · ${days}d`, fmt(opens(sq)), fmt(opens(rc)), "higher", "Pushes per day × days × open rate. Fewer sends can still mean more opens."],
+      ["Push on · day 30", pct(sq.push_on_day30), pct(rc.push_on_day30), "higher", "Share of people who still have push enabled after the first month."],
+      [`Push on · day ${days}`, pct(sq.push_on_end), pct(rc.push_on_end), "higher", "Share of people who still have push enabled at the end. Permission never comes back."],
+      ["Reach days", fmt(rSq, 0), fmt(rRc, 0), "higher", `Of ${days} days, how many the average person could still be reached (area under the permission curve).`],
+      ["DND days per person", fmt(sq.dnd_days_per_user, 1), fmt(rc.dnd_days_per_user, 1), "lower", "Days the person silenced everything after too many ignored pushes."],
+      ["Pushes per extra active day", fmt(cost(sq), 0), fmt(cost(rc), 0), "lower", "Total pushes sent ÷ extra active days. The cost of one unit of lift."],
+    ];
+    $("tiles").innerHTML = T.map(([k, a, b, want, def]) => {
+      const na = parseFloat(a), nb = parseFloat(b);
+      const better = want === "higher" ? nb > na : nb < na, same = Math.abs(nb - na) < 1e-9;
+      const d = nb - na, isPct = /%$/.test(a);
+      const delta = (d > 0 ? "▲ " : "▼ ") + (isPct ? Math.abs(Math.round(d)) + " pts" : fmt(Math.abs(d), Number.isInteger(na) && Number.isInteger(nb) ? 0 : 1));
+      return `<div class="tile" data-tip="${esc(def)}"><div class="k">${k}</div>
+        <div class="pair"><div><span class="who">Default</span><span class="num sq">${a}</span></div><div><span class="who">Recommended</span><span class="num rec">${b}</span></div></div>
+        <div class="delta ${same ? "flat" : better ? "good" : "bad"}">${same ? "no change" : delta + (better ? " · better" : " · worse")}</div></div>`;
+    }).join("");
+
+    // mechanism vs volume
+    const row = (name, x, hl) => `<tr class="${hl ? "hl" : ""}"><td>${name}</td><td>${esc(x.policy)}</td><td class="n">${fmt(x.sends_per_user_day, 2)}</td><td class="n">+${fmt(x.incremental_active_days)} ± ${fmt(x.ci95)}</td><td class="n">${pct(x.push_on_end)}</td><td class="n">${fmt(x.open_rate * 100)}%</td><td class="n">${fmt(cost(x), 0)}</td></tr>`;
+    $("cmp").innerHTML = `<thead><tr><th>Policy</th><th>Rule</th><th class="n">Pushes / day</th><th class="n">Extra active days</th><th class="n">Push on, day ${days}</th><th class="n">Open rate</th><th class="n">Pushes per extra day</th></tr></thead><tbody>` +
+      row("Today's default", sq) + row("Best volume-first", bv) + row("Recommended", rc, true) + "</tbody>";
+    const pts = Math.round((rc.push_on_end - bv.push_on_end) * 100);
+    const tiedBv = Math.abs(rc.incremental_active_days - bv.incremental_active_days) <= rc.ci95 + bv.ci95;
+    $("mech-note").innerHTML = `The best volume-first policy already cuts volume to ${fmt(bv.sends_per_user_day, 2)} a day. The recommended policy sends ${rc.sends_per_user_day < bv.sends_per_user_day ? "less still" : "about the same"} (${fmt(rc.sends_per_user_day, 2)}) and ${tiedBv ? "matches its lift" : "beats it on lift"}, while keeping <b>${pts > 0 ? pts + " more people in 100" : "the same share"}</b> reachable at day ${days}. That difference is the fatigue-aware rule itself, not the lower volume.`;
+
+    // all personas
+    const cols = ["status_quo", "recommended"];
+    $("allp").innerHTML = `<thead><tr><th>Persona</th><th>Policy</th><th class="n">Pushes / day</th><th class="n">Extra active days</th><th class="n">Push on, day 30</th><th class="n">Push on, day ${days}</th><th class="n">Reach days</th><th class="n">Open rate</th><th class="n">DND days</th></tr></thead><tbody>` +
+      Object.keys(D.recs).map((pk) => cols.map((ck, i) => {
+        const x = D.recs[pk].validation[ck], rd = reach(D.cohort[pk][ck].push_on);
+        return `<tr class="${pk === S.persona ? "cur" : ""} ${ck === "recommended" ? "hl" : ""}"><td>${i === 0 ? `<b>${PN[pk]}</b>` : ""}</td><td><span class="dot ${ck === "recommended" ? "rec" : "sq"}"></span> ${ck === "recommended" ? "Recommended" : "Today's default"}</td><td class="n">${fmt(x.sends_per_user_day, 2)}</td><td class="n">+${fmt(x.incremental_active_days)}</td><td class="n">${pct(x.push_on_day30)}</td><td class="n">${pct(x.push_on_end)}</td><td class="n">${fmt(rd, 0)}</td><td class="n">${fmt(x.open_rate * 100)}%</td><td class="n">${fmt(x.dnd_days_per_user, 1)}</td></tr>`;
+      }).join("")).join("") + "</tbody>";
+  }
+  function drawCumulative() {
+    const C = D.cohort[S.persona], a = cum(C.status_quo.incremental_dau), b = cum(C.recommended.incremental_dau);
+    const v = D.recs[S.persona].validation, sq = v.status_quo, rc = v.recommended;
+    const tied = Math.abs(rc.incremental_active_days - sq.incremental_active_days) <= rc.ci95 + sq.ci95;
+    const ahead = b[b.length - 1] > a[a.length - 1];
+    let cross = 0;
+    for (let i = 0; i < a.length; i++) if (b[i] <= a[i]) cross = i + 1;
+    const fewer = Math.round((1 - rc.sends_per_user_day / sq.sends_per_user_day) * 100);
+    $("cum-note").textContent = tied ? `The two policies finish within the same interval (+${fmt(sq.incremental_active_days)} vs +${fmt(rc.incremental_active_days)}). The recommended one gets there with ${fewer}% fewer pushes and more people still reachable.`
+      : !ahead ? "Today's default finishes ahead on lift over this horizon."
+      : cross === 0 ? "The recommended policy is ahead from day one."
+      : `Today's default is ahead for the first ${cross} days, then the lost permission catches up with it. Recommended is ahead from day ${cross + 1} and the gap keeps widening.`;
+    lineChart("chart-cum", [{ data: a, color: css("--sq"), name: "Today's default" }, { data: b, color: css("--rec"), name: "Recommended" }],
+      { lo: 0, hi: 1, nice: true, fmt: (v) => "+" + fmt(v, 0), unit: " extra active days", mark: !tied && cross > 0 && ahead ? cross + 1 : 0 });
+  }
+  function drawHeat() {
+    const R = D.recs[S.persona], caps = D.meta.grid.caps, ths = D.meta.grid.thresholds, rp = R.recommended_policy;
+    const W = 520, H = 240, ml = 74, mt = 30, mr = 10, mb = 44, iw = W - ml - mr, ih = H - mt - mb;
+    const rows = [...ths.map((t) => ({ key: "fa", t })), { key: "vf" }];
+    const cw = iw / caps.length, ch = ih / rows.length;
+    const cell = (c, r) => R.grid.find((g) => g.cap === c && (r.key === "vf" ? g.kind === "volume_first" : g.kind === "fatigue_aware" && g.threshold === r.t));
+    let lo = Infinity, hi = -Infinity;
+    rows.forEach((r) => caps.forEach((c) => { const g = cell(c, r); lo = Math.min(lo, g.incremental_active_days); hi = Math.max(hi, g.incremental_active_days); }));
+    const ink = css("--ink"), muted = css("--muted"), rec = css("--rec"), surf = css("--surface");
+    let s = `<text x="${ml + iw / 2}" y="14" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="${muted}">EXTRA ACTIVE DAYS · DARKER = MORE · OUTLINED = CHOSEN</text>`;
+    rows.forEach((r, j) => {
+      const y = mt + j * ch;
+      s += `<text x="${ml - 8}" y="${y + ch / 2 + 4}" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" fill="${muted}">${r.key === "vf" ? "vol-first" : "bar " + r.t}</text>`;
+      caps.forEach((c, i) => {
+        const g = cell(c, r), x = ml + i * cw, k = (g.incremental_active_days - lo) / (hi - lo || 1), op = 0.08 + 0.92 * k;
+        const chosen = r.key === "fa" && c === rp.cap && r.t === rp.threshold, sqc = r.key === "vf" && c === D.meta.status_quo.cap;
+        const t = `<b>${r.key === "vf" ? "Volume-first" : "Fatigue-aware, bar " + r.t}, cap ${c}</b><br>+${fmt(g.incremental_active_days)} ± ${fmt(g.ci95)} extra active days<br>${pct(g.push_on_end)} push on at day 180 · ${fmt(g.sends_per_user_day, 2)} pushes/day`;
+        s += `<rect x="${x + 1}" y="${y + 1}" width="${cw - 2}" height="${ch - 2}" rx="3" fill="${rec}" fill-opacity="${op.toFixed(2)}" stroke="${chosen ? ink : sqc ? css("--sq") : "none"}" stroke-width="${chosen ? 2.5 : 1.5}" ${sqc && !chosen ? 'stroke-dasharray="3 2"' : ""} data-tip="${esc(t)}"/>`;
+        s += `<text x="${x + cw / 2}" y="${y + ch / 2 + 4}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="${chosen ? 600 : 400}" fill="${k > 0.55 ? surf : ink}" pointer-events="none">${fmt(g.incremental_active_days)}</text>`;
+      });
+    });
+    caps.forEach((c, i) => { s += `<text x="${ml + i * cw + cw / 2}" y="${H - 22}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="${c === rp.cap ? ink : muted}" font-weight="${c === rp.cap ? 600 : 400}">${c}</text>`; });
+    s += `<text x="${ml + iw / 2}" y="${H - 5}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="${muted}">DAILY CAP · DASHED = TODAY'S DEFAULT</text>`;
+    $("chart-heat").innerHTML = s;
+    const best = R.grid.filter((g) => g.kind === "fatigue_aware").sort((a, b) => b.incremental_active_days - a.incremental_active_days)[0];
+    const chosenG = cell(rp.cap, { key: "fa", t: rp.threshold });
+    $("heat-note").textContent = best.cap === rp.cap && best.threshold === rp.threshold
+      ? `Cap ${rp.cap} with bar ${rp.threshold} has the best lift outright.`
+      : `Cap ${best.cap} with bar ${best.threshold} has the highest mean lift (+${fmt(best.incremental_active_days)}), but it is within the interval of cap ${rp.cap}, bar ${rp.threshold} (+${fmt(chosenG.incremental_active_days)}), which keeps ${Math.round((chosenG.push_on_end - best.push_on_end) * 100)} more people in 100 reachable. Ties break toward reach.`;
+  }
+
+  /* ---------- Six months: day 30 vs day 180 ---------- */
+  function renderLongrun() {
+    const v = D.recs[S.persona].validation, sq = v.status_quo, rc = v.recommended, days = D.meta.horizon_days;
+    const C = D.cohort[S.persona];
+    const row = (name, x, c, cls) => `<tr><td><span class="dot ${cls}"></span> ${name}</td><td class="n">${pct(x.push_on_day30)}</td><td class="n">${pct(x.push_on_end)}</td><td class="n">${Math.round((x.push_on_day30 - x.push_on_end) * 100)} pts</td><td class="n">${fmt(reach(c.push_on), 0)}</td></tr>`;
+    $("d30").innerHTML = `<thead><tr><th>Policy</th><th class="n">Push on, day 30</th><th class="n">Push on, day ${days}</th><th class="n">Lost after month 1</th><th class="n">Reach days</th></tr></thead><tbody>` + row("Today's default", sq, C.status_quo, "sq") + row("Recommended", rc, C.recommended, "rec") + "</tbody>";
+    const lostSq = Math.round((sq.push_on_day30 - sq.push_on_end) * 100), lostRc = Math.round((rc.push_on_day30 - rc.push_on_end) * 100);
+    $("d30-note").innerHTML = `A 30-day test would show today's default keeping <b>${pct(sq.push_on_day30)}</b> of people reachable, against <b>${pct(rc.push_on_day30)}</b> for the recommended policy: a gap of ${Math.round((rc.push_on_day30 - sq.push_on_day30) * 100)} points. By day ${days} the gap is <b>${Math.round((rc.push_on_end - sq.push_on_end) * 100)} points</b>, because the default loses another ${lostSq} points of permission after the first month and the recommended policy loses ${lostRc}.`;
+  }
+
   /* ---------- Volume recommendation ---------- */
   function bestByCap(grid, kind) {
     const m = {};
@@ -188,7 +307,8 @@
       if (g.cap === R.recommended_policy.cap) s += `<rect x="${ml + gw * i + 4}" y="${mt}" width="${gw - 8}" height="${ih}" fill="${wash}" stroke="none"/>`;
       [[v, cSq, cx - bw - 2], [g, cRec, cx + 2]].forEach(([d, col, x]) => {
         const y = Y(Math.max(0, d.incremental_active_days));
-        s += `<rect x="${x}" y="${y}" width="${bw}" height="${Y(0) - y}" fill="${col}" stroke="none" rx="2"/>`;
+        const tt = `<b>${d.kind === "volume_first" ? "Volume-first" : "Fatigue-aware, bar " + d.threshold}, cap ${d.cap}</b><br>+${fmt(d.incremental_active_days)} ± ${fmt(d.ci95)} extra active days<br>${pct(d.push_on_end)} push on at day 180 · ${fmt(d.sends_per_user_day, 2)} pushes/day`;
+        s += `<rect x="${x}" y="${y}" width="${bw}" height="${Y(0) - y}" fill="${col}" stroke="none" rx="2" data-tip="${esc(tt)}"/>`;
         const y1 = Y(Math.max(0, d.incremental_active_days - d.ci95)), y2 = Y(d.incremental_active_days + d.ci95);
         s += `<line x1="${x + bw / 2}" x2="${x + bw / 2}" y1="${y1}" y2="${y2}" stroke="${ink}" stroke-width="1.5" fill="none"/>`;
       });
@@ -205,12 +325,12 @@
     const R = D.recs[S.persona], rec = R.content_mix, sq = R.content_mix_status_quo;
     let maxShare = 0.01; [...rec, ...sq].forEach((m) => (maxShare = Math.max(maxShare, m.share_of_sends)));
     const bar = (cls, x) => `<span class="${cls}"><i style="width:${Math.max(2, (x / maxShare) * 110)}px"></i>${pct(x)}</span>`;
-    $("mix").innerHTML = `<thead><tr><th>Notification type</th><th>Share of pushes · default vs recommended</th><th class="n">Open rate · default</th><th class="n">Open rate · recommended</th><th class="n">If switched off</th><th>Rule</th></tr></thead><tbody>` +
+    $("mix").innerHTML = `<thead><tr><th>Notification type</th><th>Share of pushes · default vs recommended</th><th class="n">Per person per day · rec.</th><th class="n">Open rate · default</th><th class="n">Open rate · recommended</th><th class="n">If switched off</th><th>Rule</th></tr></thead><tbody>` +
       rec.map((m, i) => {
         const s = sq[i];
         const delta = m.delta_if_removed;
         return `<tr><td>${esc(m.label)}</td><td><div class="bars">${bar("s", s.share_of_sends)}${bar("r", m.share_of_sends)}</div></td>
-          <td class="n">${fmt(s.open_rate * 100)}%</td><td class="n">${fmt(m.open_rate * 100)}%</td>
+          <td class="n">${fmt(m.sends_per_user_day, 2)}</td><td class="n">${fmt(s.open_rate * 100)}%</td><td class="n">${fmt(m.open_rate * 100)}%</td>
           <td class="n">${delta >= 0 ? "+" : ""}${fmt(delta, 2)} ± ${fmt(m.ci95, 2)} days</td>
           <td><span class="rule ${m.rule}">${RULE_TEXT[m.rule]}</span></td></tr>`;
       }).join("") + `</tbody>`;
@@ -243,23 +363,42 @@
     [1, 30, 60, 90, 120, 150, 180].filter((d) => d <= n).forEach((d) => {
       s += `<text x="${X(d - 1)}" y="${H - 10}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="${muted}">${d}</text>`;
     });
-    series.forEach((sr) => {
-      const sm = smooth(sr.data, opt.smooth || 0);
+    if (opt.mark) {
+      const x = X(opt.mark - 1);
+      s += `<line x1="${x}" x2="${x}" y1="${mt}" y2="${mt + ih}" stroke="${muted}" stroke-width="1" stroke-dasharray="3 3"/>`;
+      s += `<text x="${x + 5}" y="${mt + 11}" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="${muted}">day ${opt.mark}</text>`;
+    }
+    const sms = series.map((sr) => smooth(sr.data, opt.smooth || 0));
+    series.forEach((sr, k) => {
+      const sm = sms[k];
       const p = sm.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ");
       s += `<path d="${p}" fill="none" stroke="${sr.color}" stroke-width="2.25" stroke-linejoin="round"/>`;
-      s += `<circle cx="${X(n - 1)}" cy="${Y(sm[n - 1])}" r="3.5" fill="${sr.color}"/>`;
-      s += `<text x="${X(n - 1) - 6}" y="${Y(sm[n - 1]) - 8}" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="${sr.color}">${opt.fmt(sm[n - 1])}</text>`;
+      s += `<circle cx="${X(n - 1)}" cy="${Y(sm[n - 1])}" r="3.5" fill="${sr.color}" stroke="${css("--surface")}" stroke-width="1.5"/>`;
+      s += `<text x="${X(n - 1) - 6}" y="${Y(sm[n - 1]) - 8 + (k ? 0 : (Math.abs(Y(sms[0][n - 1]) - Y(sms[1] ? sms[1][n - 1] : -99)) < 14 ? -12 : 0))}" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="${sr.color}">${opt.fmt(sm[n - 1])}</text>`;
     });
+    // hover: one invisible column per day, each carrying its own tooltip
+    const cw = iw / (n - 1);
+    for (let i = 0; i < n; i++) {
+      const t = `<b>Day ${i + 1}</b>` + series.map((sr, k) => `<br><i style="background:${sr.color}"></i>${sr.name || ""} ${opt.fmt(sms[k][i])}${opt.unit || ""}`).join("");
+      s += `<rect class="hov" x="${X(i) - cw / 2}" y="${mt}" width="${cw}" height="${ih}" fill="transparent" data-tip="${esc(t)}"/>`;
+    }
+    s += `<line id="${id}-x" x1="0" x2="0" y1="${mt}" y2="${mt + ih}" stroke="${muted}" stroke-width="1" opacity="0"/>`;
     $(id).innerHTML = s;
+    const xl = $(id + "-x");
+    $(id).addEventListener("mousemove", (e) => {
+      const r = e.target.closest(".hov"); if (!r) { xl.setAttribute("opacity", 0); return; }
+      const cx = +r.getAttribute("x") + cw / 2; xl.setAttribute("x1", cx); xl.setAttribute("x2", cx); xl.setAttribute("opacity", 0.8);
+    });
+    $(id).addEventListener("mouseleave", () => xl.setAttribute("opacity", 0));
   }
   function renderCharts() {
     if (!D) return;
-    drawVolume();
+    drawVolume(); drawCumulative(); drawHeat();
     const C = D.cohort[S.persona], cSq = css("--sq"), cRec = css("--rec");
-    lineChart("chart-perm", [{ data: C.status_quo.push_on, color: cSq }, { data: C.recommended.push_on, color: cRec }],
-      { lo: 0, hi: 1, fmt: (v) => Math.round(v * 100) + "%" });
-    lineChart("chart-dau", [{ data: C.status_quo.incremental_dau, color: cSq }, { data: C.recommended.incremental_dau, color: cRec }],
-      { lo: 0, hi: 1, nice: true, smooth: 3, fmt: (v) => "+" + fmt(v) + "pp" });
+    lineChart("chart-perm", [{ data: C.status_quo.push_on, color: cSq, name: "Today's default" }, { data: C.recommended.push_on, color: cRec, name: "Recommended" }],
+      { lo: 0, hi: 1, fmt: (v) => Math.round(v * 100) + "%", unit: " push on" });
+    lineChart("chart-dau", [{ data: C.status_quo.incremental_dau, color: cSq, name: "Today's default" }, { data: C.recommended.incremental_dau, color: cRec, name: "Recommended" }],
+      { lo: 0, hi: 1, nice: true, smooth: 3, fmt: (v) => "+" + fmt(v) + "pp", unit: " of users active who otherwise would not be" });
   }
 
   /* ---------- data files ---------- */

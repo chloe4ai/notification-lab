@@ -24,6 +24,19 @@ This is the same problem as ad frequency capping: the marginal impression has a 
 
 The optimiser grid-searches 30 policies (6 ceilings × volume-first and 4 relevance bars) on 3,000 simulated people per persona over 180 days. Among policies whose lift is statistically tied with the best, it picks the one that keeps the most people reachable. Each content type is then switched off in turn to measure what it contributes. Final numbers come from a fresh cohort of 4,500 people the optimiser never saw.
 
+## What the site shows
+
+| Post | Content |
+|---|---|
+| 01 Metrics dashboard | Nine headline metrics per persona (pushes/day, lift, open rate, opens per person, push on at day 30 and 180, reach days, DND days, pushes per extra active day), cumulative lift curve, the cap × relevance-bar grid the optimiser searched, a "mechanism or just less volume" comparison against the best volume-first policy, and all three personas side by side. |
+| 02 One person, first 30 days | Two phones, same person, push by push, with a 30-day strip and population summary. |
+| 03 How many pushes a day | Lift by daily cap with 95% intervals; validation table on a fresh cohort. |
+| 04 Which pushes to send | Share of sends, open rate and ablation result per notification type. |
+| 05 What the first month hides | Permission and lift curves over 180 days; day-30 vs day-180 table. |
+| 06 How the numbers are made | Model steps and the data files. |
+
+Every chart has hover tooltips; the sidebar has a glossary of the metrics.
+
 ## Results (validation cohort, 180 days)
 
 | Persona | Policy | Pushes / day | Extra active days | Push still on |
