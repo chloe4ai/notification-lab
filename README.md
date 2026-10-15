@@ -4,7 +4,7 @@
 
 A simulation of push-notification fatigue for a community app. It follows one person through their first month, push by push, and recommends how many notifications to send each day, and which ones, for three kinds of users.
 
-> Concept demo. All data is simulated and parameters are illustrative, not fitted to any company's logs. The app in the demo ("Threadline") is invented. Not affiliated with Reddit.
+> Concept demo. All data is simulated and parameters are illustrative, not fitted to any company's logs. The app in the demo ("Kin") is invented. Not affiliated with Reddit.
 
 ## Why
 

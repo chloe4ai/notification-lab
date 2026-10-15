@@ -143,7 +143,7 @@
       if (d.revoked_today) banners += `<div class="banner off">⦸ Turned push off tonight</div>`;
       if (!off && !notes.length) banners += `<div class="banner quiet">Nothing cleared the bar today, so nothing was sent</div>`;
       const cards = notes.map((n) => `<div class="push ${n.outcome}">
-          <div class="h"><span class="app"><i class="ico"></i>Threadline</span><span>${esc(n.time)} <span class="tag ${n.outcome}">${n.outcome === "muted" ? "silenced" : n.outcome}</span></span></div>
+          <div class="h"><span class="app"><i class="ico"></i>Kin</span><span>${esc(n.time)} <span class="tag ${n.outcome}">${n.outcome === "muted" ? "silenced" : n.outcome}</span></span></div>
           <div class="ti">${esc(n.title)}</div><div class="bo">${esc(n.body)}</div>
           <div class="c">r/${esc(n.community)} · ${esc(D.typeLabel[n.type])}</div></div>`).reverse().join("");
       const empty = off ? `<div class="empty">This person will not hear from the app again unless they go into settings and turn push back on.</div>` : "";
