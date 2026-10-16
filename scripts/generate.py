@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from nlab import content, params as P  # noqa: E402
-from nlab.optimize import ablate, content_mix, grid_policies, pick  # noqa: E402
+from nlab.optimize import ablate, content_mix, grid_policies, ladder, pick  # noqa: E402
 from nlab.sim import Policy, simulate  # noqa: E402
 
 OUT = ROOT / "docs" / "data"
@@ -75,7 +75,7 @@ def events(persona, pols, w):
         for u in tr:
             for d in r.trace[u]:
                 for n, tm in zip(d["notifications"], content.times(len(d["notifications"]), rng)):
-                    w.writerow([persona, key, f"{persona[:3]}-{u:03d}", d["day"], tm, n["type"],
+                    w.writerow([persona, key, f"{persona[:3]}-{u:03d}", d["day"], tm, n["channel"], n["type"],
                                 n["relevance"], n["outcome"], n["fatigue_after"], int(d["dnd"]),
                                 int(d["push_on"] and not d["revoked_today"])])
 
@@ -90,7 +90,7 @@ def main(quick: bool):
     recs, cohort, lived = {}, {}, {}
     fh = open(OUT / "events_sample.csv", "w", newline="")
     w = csv.writer(fh)
-    w.writerow(["persona", "policy", "person_id", "day", "time", "type", "relevance", "outcome",
+    w.writerow(["persona", "policy", "person_id", "day", "time", "channel", "type", "relevance", "outcome",
                 "fatigue_after", "dnd_day", "push_on_end_of_day"])
 
     for persona in P.PERSONAS:
@@ -98,9 +98,15 @@ def main(quick: bool):
         results = [simulate(persona, pol, n_tr, days, P.TRAIN_SEED) for pol in grid_policies()]
         vf = [r for r in results if r.policy.kind == "volume_first"]
         fa = [r for r in results if r.policy.kind == "fatigue_aware"]
+        up = [r for r in results if r.policy.kind == "uplift_aware"]
         best_fa, tied = pick(fa)
         best_vf, _ = pick(vf)
+        best_up, _ = pick(up)
         sq_tr = next(r for r in vf if r.policy.cap == sq.cap)
+
+        print(f"[{persona}] operational layers", flush=True)
+        lad = ladder(persona, best_fa.policy, n_tr, days, P.TRAIN_SEED)
+        best_layered, _ = pick(lad)
 
         print(f"[{persona}] content ablation", flush=True)
         abl = ablate(persona, best_fa.policy, best_fa, n_tr, days, P.TRAIN_SEED)
@@ -108,20 +114,27 @@ def main(quick: bool):
         mix = content_mix(best_fa, abl)
         dropped = [m["type"] for m in mix if m["rule"] == "drop"]
         allowed = tuple(k for k in P.TYPE_KEYS if k not in dropped)
+        lp = best_layered.policy
         rec = Policy("fatigue_aware", best_fa.policy.cap, best_fa.policy.threshold, P.LAMBDA,
-                     None if not dropped else allowed)
+                     None if not dropped else allowed,
+                     state_budget=lp.state_budget, batch=lp.batch, email=lp.email)
 
         print(f"[{persona}] validation on a fresh cohort", flush=True)
         v = {}
-        for key, pol in (("status_quo", sq), ("best_volume_first", best_vf.policy),
-                         ("best_fatigue_aware", best_fa.policy), ("recommended", rec)):
+        core = Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed)
+        val_pols = [("none", Policy("none")), ("status_quo", sq), ("best_volume_first", best_vf.policy),
+                    ("best_fatigue_aware", best_fa.policy), ("recommended", rec), ("uplift_aware", best_up.policy),
+                    ("layer_core", core),
+                    ("layer_state", Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed, state_budget=rec.state_budget)),
+                    ("layer_batch", Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed, state_budget=rec.state_budget, batch=rec.batch)),
+                    ("layer_email", rec)]
+        cohort_runs = {}
+        for key, pol in val_pols:
             r = simulate(persona, pol, n_va, days, P.VALIDATION_SEED)
             v[key] = {"policy": pol.name + (" · content rules" if key == "recommended" and dropped else ""),
                       **r.summary()}
-            if key == "status_quo":
-                c_sq = r
-            if key == "recommended":
-                c_rec = r
+            cohort_runs[key] = r
+        c_sq, c_rec = cohort_runs["status_quo"], cohort_runs["recommended"]
 
         recs[persona] = {
             "grid": [row(r) for r in results],
@@ -130,27 +143,39 @@ def main(quick: bool):
             "content_mix": mix,
             "content_mix_status_quo": content_mix(sq_tr, abl_sq),
             "recommended_policy": {"kind": "fatigue_aware", "cap": rec.cap, "lam": rec.lam,
-                                   "threshold": rec.threshold, "allowed": list(allowed), "dropped": dropped},
+                                   "threshold": rec.threshold, "allowed": list(allowed), "dropped": dropped,
+                                   "state_budget": rec.state_budget, "batch": rec.batch, "email": rec.email},
+            "ladder_train": [row(r) for r in lad],
             "validation": v,
         }
+        r4 = lambda a: [round(float(x), 4) for x in a]
         cohort[persona] = {
-            k: {"push_on": [round(float(x), 4) for x in r.daily_push_on],
-                "incremental_dau": [round(float(x) * 100, 3) for x in r.daily_incremental]}
-            for k, r in (("status_quo", c_sq), ("recommended", c_rec))
+            k: {"push_on": r4(r.daily_push_on),
+                "incremental_dau": [round(float(x) * 100, 3) for x in r.daily_incremental],
+                "active": r4(r.active.mean(0)),
+                "dau_mau": r4(r.dau_mau(r.active)),
+                "retained": {str(d): round(r.retained(r.active, d), 4) for d in (1, 7, 14, 30, 60, 90, 120, 150, 180) if d <= days}}
+            for k, r in (("status_quo", c_sq), ("recommended", c_rec), ("uplift_aware", cohort_runs["uplift_aware"]))
         }
+        # logged-out look-alike: the same people with organic visits only
+        base = cohort_runs["none"]
+        cohort[persona]["none"] = {"active": r4(base.active.mean(0)), "dau_mau": r4(base.dau_mau(base.active)),
+                                   "retained": {str(d): round(base.retained(base.active, d), 4) for d in (1, 7, 14, 30, 60, 90, 120, 150, 180) if d <= days}}
         print(f"[{persona}] lived experience + events", flush=True)
         lived[persona] = lived_view(persona, sq, rec, rng)
         events(persona, {"status_quo": sq, "recommended": rec}, w)
         s, rv = v["status_quo"], v["recommended"]
-        print(f"[{persona}] cap {rec.cap} bar {rec.threshold} | lift {s['incremental_active_days']} -> "
-              f"{rv['incremental_active_days']} | push on {s['push_on_end']} -> {rv['push_on_end']}", flush=True)
+        print(f"[{persona}] {rec.name} | lift {s['incremental_active_days']} -> {rv['incremental_active_days']} | "
+              f"push on {s['push_on_end']} -> {rv['push_on_end']} | reachable {rv['reachable_end']} | "
+              f"DAU/MAU {s['dau_mau_end']} -> {rv['dau_mau_end']}", flush=True)
     fh.close()
 
     meta = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "horizon_days": days, "users_per_config": n_tr, "validation_users": n_va,
         "train_seed": P.TRAIN_SEED, "validation_seed": P.VALIDATION_SEED,
-        "status_quo": P.STATUS_QUO, "grid": {"caps": P.CAPS, "thresholds": P.THRESHOLDS},
+        "status_quo": P.STATUS_QUO, "grid": {"caps": P.CAPS, "thresholds": P.THRESHOLDS, "uplift_thresholds": P.UPLIFT_THRESHOLDS},
+        "email": P.EMAIL, "state": P.STATE, "batch": P.BATCH,
         "types": P.TYPES,
         "personas": {k: {kk: vv for kk, vv in p.items()} for k, p in P.PERSONAS.items()},
         "communities": P.COMMUNITIES,

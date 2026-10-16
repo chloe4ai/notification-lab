@@ -15,7 +15,19 @@ VALIDATION_SEED = 202
 STATUS_QUO = {"kind": "volume_first", "cap": 5}
 CAPS = [1, 2, 3, 4, 5, 6]
 THRESHOLDS = [0.22, 0.30, 0.38, 0.46]
+UPLIFT_THRESHOLDS = [0.01, 0.02, 0.03, 0.05]  # uplift scores are relevance x open chance x (1 - would-visit-anyway)
 LAMBDA = 0.6  # irritation cost weight in the fatigue-aware score
+
+# Email digest for people who turned push off (LinkedIn ATC-style channel fallback).
+# Opens are rarer than push, it irritates less, and it has its own unsubscribe.
+EMAIL = {"every": 3, "open_mul": 0.45, "annoy": 0.5, "unsub_per_ignore": 0.012}
+
+# Per-state budget (Pinterest-style): core users come anyway, so halve their cap;
+# dormant users are where a push adds most, so lower their bar a little.
+STATE = {"core_days": 10, "dormant_bar_relief": 0.06}   # over a 14-day window
+
+# Batching: fold two or more unsent pool candidates into one digest push.
+BATCH = {"bonus": 0.08}
 
 # base: mean relevance; annoy: fatigue added when ignored (relative);
 # value: how much an open is worth in engagement terms; supply: where candidates come from

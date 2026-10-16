@@ -10,7 +10,24 @@ from .sim import Policy, Result, simulate
 def grid_policies() -> list[Policy]:
     out = [Policy("volume_first", c) for c in P.CAPS]
     out += [Policy("fatigue_aware", c, th) for c in P.CAPS for th in P.THRESHOLDS]
+    out += [Policy("uplift_aware", c, th) for c in P.CAPS for th in P.UPLIFT_THRESHOLDS]
     return out
+
+
+def tied_with(results: list[Result], best: dict) -> list[Result]:
+    return [r for r in results
+            if r.summary()["incremental_active_days"] + r.summary()["ci95"] >= best["incremental_active_days"] - best["ci95"]]
+
+
+def ladder(persona: str, base: Policy, n: int, days: int, seed: int) -> list[Result]:
+    """Add the operational layers one at a time on top of the chosen cap and bar."""
+    steps = [base,
+             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True),
+             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True, batch=True),
+             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True, batch=True, email=True),
+             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, batch=True, email=True),
+             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, email=True)]
+    return [simulate(persona, p, n, days, seed) for p in steps]
 
 
 def pick(results: list[Result]) -> tuple[Result, list[int]]:
@@ -24,7 +41,7 @@ def pick(results: list[Result]) -> tuple[Result, list[int]]:
     best_r, best = max(sums, key=lambda x: x[1]["incremental_active_days"])
     tied = [(r, s) for r, s in sums
             if s["incremental_active_days"] + s["ci95"] >= best["incremental_active_days"] - best["ci95"]]
-    chosen = max(tied, key=lambda x: (x[1]["push_on_end"], -x[1]["sends_per_user_day"]))[0]
+    chosen = max(tied, key=lambda x: (x[1]["reachable_end"], x[1]["push_on_end"], -x[1]["sends_per_user_day"]))[0]
     tied_caps = sorted({r.policy.cap for r, _ in tied if r.policy.kind == chosen.policy.kind})
     return chosen, tied_caps
 

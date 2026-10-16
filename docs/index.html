@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Notification Lab</title>
-<meta name="description" content="A simulation of push-notification fatigue for a community app: one person's first month, push by push, and a data-backed recommendation for daily send volume and content.">
+<meta name="description" content="Notifications as a retention channel: a signup cohort of a community app simulated over 180 days, and the send policy that lifts logged-in DAU/MAU without burning push permission.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -27,9 +27,9 @@
 <article class="post hero">
   <div class="votes" aria-hidden="true"><i class="up">▲</i><b>00</b><i class="dn">▼</i></div>
   <div class="post-main">
-    <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · Posted by u/chloe4ai · Oct 2026 <span class="flair">Growth · notifications</span></p>
-    <h1>Fewer, more personal pushes keep the channel open</h1>
-    <p class="thesis">A push that gets ignored is not free. It spends a little of the user's patience, and once that runs out they mute you or turn push off for good. This lab simulates thousands of people over 180 days, follows one of them through their first month, and recommends how many notifications to send each day and which ones.</p>
+    <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · Posted by u/chloe4ai · Oct 2026 <span class="flair">Growth · Retention · Notifications</span></p>
+    <h1>Notifications as a retention channel: lift logged-in DAU/MAU without burning the channel</h1>
+    <p class="thesis">After someone signs up, push and email are the two levers that bring them back. But a push that gets ignored is not free: it spends a little of the person's patience, and once that runs out they turn push off for good and the lever is gone. This lab takes a cohort of new signups, simulates 180 days under today's default policy and a fatigue-aware one, and reports what a retention team cares about: DAU/MAU, day-N retention, and how many people can still be reached.</p>
 
     <div class="persona-pick" role="tablist" aria-label="Who is this person">
       <span class="sort-label">Persona</span>
@@ -43,14 +43,48 @@
   </div>
 </article>
 
-<article class="post block" id="dashboard">
+<article class="post block" id="funnel">
   <div class="votes" aria-hidden="true"><i class="up">▲</i><b>01</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">01 · Dashboard</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">01 · Where this sits</span></p>
+      <h2>The growth funnel this project lives in</h2>
+      <p class="sub">A community app's growth loop has three stages. Search brings logged-out visitors; identity turns them into accounts; notifications bring accounts back. This lab is the third stage, and it also shows what the second one is worth: the same people, registered and reachable, against a logged-out look-alike who only visits on their own.</p>
+    </div>
+  </div>
+  <div class="funnel" role="img" aria-label="Three-stage funnel: SEO acquisition, identity activation, notifications retention">
+    <div class="stage"><span class="st-k">Acquisition</span><b>SEO</b><p>Logged-out traffic from search. Reads one page and leaves.</p></div>
+    <i class="arrow">→</i>
+    <div class="stage"><span class="st-k">Activation</span><b>Identity</b><p>Logged-out → signup → login → onboarding. The biggest leak.</p></div>
+    <i class="arrow">→</i>
+    <div class="stage on"><span class="st-k">Retention · this lab</span><b>Notifications</b><p>Push and email bring the account back. KPI: logged-in DAU/MAU.</p></div>
+  </div>
+  <div class="two dash-row">
+    <div>
+      <h3>DAU/MAU of one signup cohort, 180 days</h3>
+      <p class="chart-note" id="dm-note"></p>
+      <div class="legend"><span><i class="sw none"></i>Logged-out look-alike (no pushes)</span><span><i class="sw sq"></i>Today's default</span><span><i class="sw rec"></i>Recommended</span></div>
+      <div class="scroll"><svg id="chart-dm" viewBox="0 0 520 240" role="img" aria-label="DAU over MAU of the cohort over 180 days under three policies"></svg></div>
+    </div>
+    <div>
+      <h3>Still active at day N</h3>
+      <p class="chart-note" id="ret-note"></p>
+      <div class="scroll"><table class="mix ret" id="ret"></table></div>
+    </div>
+  </div>
+  <div class="actions"><a href="#funnel">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
+
+<article class="post block" id="dashboard">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>02</b><i class="dn">▼</i></div>
+  <div class="post-main">
+  <div class="block-head">
+    <div>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">02 · Dashboard</span></p>
       <h2>Metrics dashboard</h2>
-      <p class="sub">Every headline number for the selected persona, today's default against the recommended policy, measured on the validation cohort over 180 days. Hover a tile for its definition.</p>
+      <p class="sub">Every headline number for the selected persona, today's default against the recommended policy, measured on a validation cohort of new signups over 180 days. Hover a tile for its definition.</p>
     </div>
   </div>
 
@@ -70,23 +104,33 @@
     </div>
   </div>
 
+  <h3 class="mt">Lift against reach: the trade-off every policy makes</h3>
+  <p class="sub">Each point is one of the policies the optimiser tried. Right is more people still reachable at day 180; up is more lift. The slider sets how much a reachable person is worth relative to an active day (the idea behind the α in Twitter's volume work): drag it and watch which policy wins.</p>
+  <div class="player">
+    <label class="day-label" for="alpha">α = <span id="alpha-v">0.02</span></label>
+    <input type="range" id="alpha" min="0" max="0.10" step="0.005" value="0.02">
+    <span class="chart-note" id="alpha-note" style="margin:0"></span>
+  </div>
+  <div class="legend"><span><i class="sw sq"></i>Volume-first</span><span><i class="sw rec"></i>Fatigue-aware</span><span><i class="sw hollow"></i>Uplift-aware</span><span><i class="star">★</i>Best at this α</span></div>
+  <div class="scroll"><svg id="chart-front" viewBox="0 0 860 300" role="img" aria-label="Scatter of lift against share of users with push on, one point per policy"></svg></div>
+
   <h3 class="mt">Mechanism or just less volume?</h3>
   <p class="sub" id="mech-note"></p>
   <div class="scroll"><table class="mix cmp" id="cmp"></table></div>
 
   <h3 class="mt">All three personas side by side</h3>
   <div class="scroll"><table class="mix allp" id="allp"></table></div>
-  <p class="foot-note">Lift is extra active days per user versus the same person receiving no pushes. Reach days is the area under the push-permission curve: how many of the 180 days the average person could still be reached. Pushes per extra active day is the cost of one unit of lift. ± is a 95% interval.</p>
+  <p class="foot-note">Lift is extra active days per user versus the same person receiving no pushes. Reachable is the share who still have push on, or email if the policy uses it. Reach days is the area under the push-permission curve. Pushes per extra active day is the cost of one unit of lift. ± is a 95% interval.</p>
   <div class="actions"><a href="#dashboard">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
   </div>
 </article>
 
 <article class="post block" id="lived">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>02</b><i class="dn">▼</i></div>
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>03</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">02 · Lived experience</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">03 · Lived experience</span></p>
       <h2>One person, first 30 days</h2>
       <p class="sub">The same kind of person under two policies. First, today's default: the top five candidates every day. Then the recommended policy. Pick a day or press play.</p>
     </div>
@@ -131,11 +175,11 @@
 </article>
 
 <article class="post block" id="volume">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>03</b><i class="dn">▼</i></div>
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>04</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">03 · Recommendation</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">04 · Recommendation</span></p>
       <h2>How many pushes a day</h2>
       <p class="sub" id="vol-sub"></p>
     </div>
@@ -153,11 +197,11 @@
 </article>
 
 <article class="post block" id="content">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>04</b><i class="dn">▼</i></div>
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>05</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">04 · Recommendation</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">05 · Recommendation</span></p>
       <h2>Which pushes to send</h2>
       <p class="sub">Share of all pushes by type, today's default against the recommended policy. The rule column comes from switching each type off in turn and measuring the change in extra active days.</p>
     </div>
@@ -169,13 +213,13 @@
 </article>
 
 <article class="post block" id="longrun">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>05</b><i class="dn">▼</i></div>
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>06</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">05 · Six months</span></p>
-      <h2>What the first month hides</h2>
-      <p class="sub">Push permission only goes one way. Every point lost here caps every campaign that comes after it.</p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">06 · Six months</span></p>
+      <h2>What a 30-day test hides</h2>
+      <p class="sub">Push permission only goes one way. A D30 retention readout looks fine under today's default; the damage shows at D90 and beyond, and every point lost caps every campaign that comes after it.</p>
     </div>
   </div>
   <div class="legend"><span><i class="sw sq"></i>Today's default</span><span><i class="sw rec"></i>Recommended</span></div>
@@ -195,23 +239,67 @@
   </div>
 </article>
 
-<article class="post block method" id="method">
-  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>06</b><i class="dn">▼</i></div>
+<article class="post block" id="layers">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>07</b><i class="dn">▼</i></div>
   <div class="post-main">
   <div class="block-head">
     <div>
-      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">06 · Method and data</span></p>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">07 · What I'd ship</span></p>
+      <h2>What each layer adds</h2>
+      <p class="sub">The recommended policy is built in layers, each borrowed from something a large consumer app has published. Each bar is the validation cohort with one more layer switched on. The optimiser keeps a layer only if it does not lose lift; a layer it rejected is still shown so you can see why.</p>
+    </div>
+  </div>
+  <div class="legend"><span><i class="sw sq"></i>Today's default</span><span><i class="sw rec"></i>Recommended stack</span><span><i class="sw hollow"></i>Measured, not shipped</span></div>
+  <div class="scroll"><svg id="chart-ladder" viewBox="0 0 860 320" role="img" aria-label="Lift and reachable share for each layer of the recommended policy"></svg></div>
+  <div class="scroll"><table class="mix lad" id="lad"></table></div>
+  <p class="foot-note" id="lad-note"></p>
+  <div class="actions"><a href="#layers">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
+
+<article class="post block" id="industry">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>08</b><i class="dn">▼</i></div>
+  <div class="post-main">
+  <div class="block-head">
+    <div>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">08 · Prior art</span></p>
+      <h2>What the big apps do, and what is in this lab</h2>
+      <p class="sub">The same problem has been published on by several consumer apps. This is what each one did, what they reported, and which part of it this lab reproduces.</p>
+    </div>
+  </div>
+  <div class="scroll"><table class="mix ind">
+    <thead><tr><th>Company</th><th>What they did</th><th>What they reported</th><th>In this lab</th></tr></thead>
+    <tbody>
+      <tr><td><b>Pinterest</b><br><span class="dim">KDD 2018, Pinterest Engineering</span></td><td>A weekly notification budget per user, set by user state, optimising long-term activity minus the cost of unsubscribes. Labels came from randomly assigned weekly volumes.</td><td>Volume −6 to −24%, CTR +11 to +31%, site engagement +1 to +3%. Volume moved from core users to marginal ones.</td><td><span class="rule send">Per-state budget</span> core users get half the cap, dormant users a lower bar</td></tr>
+      <tr><td><b>LinkedIn</b><br><span class="dim">Air Traffic Controller</span></td><td>One gateway for every notification: rate limits per upstream app, send-time by locale, channel choice (in-app, push, email), aggregation of several items into one, de-duplication.</td><td>Member complaints halved, double-digit site engagement gain.</td><td><span class="rule send">Batching</span> two or more feed items become one digest · <span class="rule send">Email fallback</span> for people who turned push off</td></tr>
+      <tr><td><b>Instagram</b><br><span class="dim">Meta Engineering, 2022</span></td><td>Replaced the click model with an uplift model: a 50% random holdout taught it the <i>incremental</i> effect of a push, so active users who would open the app anyway stop getting them. Send rate held fixed by a quantile transform.</td><td>Sending volume "reduced substantially" with no drop in engagement.</td><td><span class="rule optional">Uplift-aware policy</span> scored by relevance × open chance × (1 − would visit anyway). Measured, not shipped: see post 07</td></tr>
+      <tr><td><b>Twitter / X</b><br><span class="dim">Engineering blog, 2022</span></td><td>Cohort caps plus personalised caps; a six-state model of user activity; long-term utility with two-month delayed labels; an α that trades DAU against reachability.</td><td>DAU +0.62% iOS, +0.39% Android, reachability unchanged.</td><td><span class="rule send">α slider</span> in the dashboard · tie-break toward reach in the optimiser</td></tr>
+      <tr><td><b>Facebook</b><br><span class="dim">Horizon, 2018</span></td><td>Reinforcement learning decides send or drop per notification, reward is downstream activity with a penalty per send.</td><td>Published as a platform paper; no engagement figures.</td><td><span class="rule rare">Not here</span> the fatigue-aware score is the hand-written version of that reward</td></tr>
+      <tr><td><b>Duolingo</b><br><span class="dim">KDD 2020</span></td><td>A bandit picks the reminder copy per learner per day, with a recency penalty so templates do not go stale.</td><td>DAU +0.5%, new-user retention +2%.</td><td><span class="rule rare">Not here</span> copy is fixed; the lab is about volume and mix</td></tr>
+    </tbody>
+  </table></div>
+  <p class="foot-note">Sources: <a href="https://medium.com/pinterest-engineering/user-state-based-notification-volume-optimization-7764118f73ff">Pinterest</a> · <a href="https://www.linkedin.com/blog/engineering/messaging-notifications/air-traffic-controller-member-first-notifications-at-linkedin">LinkedIn ATC</a> · <a href="https://engineering.fb.com/2022/10/31/ml-applications/instagram-notification-management-machine-learning/">Instagram</a> · <a href="https://blog.x.com/engineering/en_us/topics/insights/2022/a-hybrid-approach-to-personalize-notification-volume">X</a> · <a href="https://arxiv.org/abs/1811.00260">Horizon</a> · <a href="https://blog.duolingo.com/hi-its-duo-the-ai-behind-the-meme/">Duolingo</a> · survey by <a href="https://eugeneyan.com/writing/push/">Eugene Yan</a>. Industry benchmark for context: in one widely cited survey, 46% of users said they would opt out after 2–5 pushes in a week.</p>
+  <div class="actions"><a href="#industry">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
+  </div>
+</article>
+
+<article class="post block method" id="method">
+  <div class="votes" aria-hidden="true"><i class="up">▲</i><b>09</b><i class="dn">▼</i></div>
+  <div class="post-main">
+  <div class="block-head">
+    <div>
+      <p class="meta"><span class="avatar"></span><b>r/NotificationLab</b> · u/chloe4ai <span class="flair">09 · Method and data</span></p>
       <h2>How the numbers are made</h2>
     </div>
   </div>
   <div class="steps">
-    <div><b>Supply</b><p>Each day a person gets candidates: replies to their posts and comments (in proportion to how much they contribute), upvote milestones, trending posts from joined communities, a digest, recommendations and community suggestions.</p></div>
-    <div><b>Select</b><p>Volume-first sends the top <i>cap</i> by relevance. Fatigue-aware subtracts an irritation cost that grows with fatigue, shrinks the cap as fatigue rises, and skips anything below a relevance bar.</p></div>
-    <div><b>Respond</b><p>Open probability = relevance × (1 − fatigue) × the person's willingness. Opens lower fatigue; ignores raise it. Past the person's threshold, the rest of the day is Do Not Disturb. Fatigue also makes unprompted visits less likely; recent opens make them more likely.</p></div>
-    <div><b>Burn</b><p>Each day there is a small chance, growing with fatigue², that the person turns push off. It never comes back. Lift is measured against the same person with no pushes.</p></div>
+    <div><b>Supply</b><p>Each day a new signup gets candidates: replies to their posts and comments (in proportion to how much they contribute), upvote milestones, trending posts from joined communities, a digest, recommendations and community suggestions.</p></div>
+    <div><b>Select</b><p>Volume-first sends the top <i>cap</i> by relevance. Fatigue-aware subtracts an irritation cost that grows with fatigue, shrinks the cap as fatigue rises, and skips anything below a relevance bar. Optional layers: half the cap for core users and a lower bar for dormant ones; two or more feed items folded into one digest; an email digest every third day for people who turned push off.</p></div>
+    <div><b>Respond</b><p>Open probability = relevance × (1 − fatigue) × the person's willingness; email opens at under half the rate of push. Opens lower fatigue; ignores raise it. Past the person's threshold, the rest of the day is Do Not Disturb. Fatigue also makes unprompted visits less likely; recent opens make them more likely.</p></div>
+    <div><b>Burn</b><p>Each day there is a small chance, growing with fatigue², that the person turns push off. It never comes back. Ignored emails carry their own unsubscribe chance. Lift, DAU/MAU and retention are measured against the same person with no pushes, which is also the logged-out look-alike.</p></div>
   </div>
   <div class="data-list" id="data-list"></div>
-  <p class="foot-note">The optimiser searches every ceiling and relevance bar on one cohort, breaks ties toward the policy that keeps more people reachable, and reports results on a second cohort it never saw. All data is simulated. Parameters are illustrative, not fitted to any company's logs. The point is the mechanism: calibrate against a real holdout before trusting any number. Source, generator and tests are in the <a href="https://github.com/chloe4ai/notification-lab">repository</a>.</p>
+  <p class="foot-note">The optimiser searches every ceiling and relevance bar, then switches the operational layers on one at a time and keeps those that do not lose lift, breaking ties toward the policy that keeps more people reachable. Results are reported on a second cohort it never saw. All data is simulated. Parameters are illustrative, not fitted to any company's logs. The point is the mechanism: calibrate against a real holdout before trusting any number. Source, generator and tests are in the <a href="https://github.com/chloe4ai/notification-lab">repository</a>.</p>
   <div class="actions"><a href="#method">🔗 Permalink</a><a href="https://github.com/chloe4ai/notification-lab">⌥ Source</a></div>
   </div>
 </article>
@@ -222,28 +310,33 @@
   <div class="card about">
     <div class="about-head">About Community</div>
     <div class="about-body">
-      <p>A push-notification fatigue simulator for a community app. Thousands of simulated people, 180 days, two policies.</p>
-      <div class="about-stats"><div><b>180</b><span>days</span></div><div><b>3</b><span>personas</span></div><div><b>2</b><span>policies</span></div></div>
+      <p>A push-notification retention simulator for a community app. A cohort of new signups, 180 days, today's default against a fatigue-aware policy.</p>
+      <div class="about-stats"><div><b>180</b><span>days</span></div><div><b>3</b><span>personas</span></div><div><b>54</b><span>policies tried</span></div></div>
       <a class="join" href="https://github.com/chloe4ai/notification-lab">View on GitHub</a>
     </div>
   </div>
   <div class="card toc">
     <div class="card-head">Posts in this lab</div>
     <ol>
-      <li><a href="#dashboard"><span>01</span>Metrics dashboard</a></li>
-      <li><a href="#lived"><span>02</span>One person, first 30 days</a></li>
-      <li><a href="#volume"><span>03</span>How many pushes a day</a></li>
-      <li><a href="#content"><span>04</span>Which pushes to send</a></li>
-      <li><a href="#longrun"><span>05</span>What the first month hides</a></li>
-      <li><a href="#method"><span>06</span>How the numbers are made</a></li>
+      <li><a href="#funnel"><span>01</span>The growth funnel this lives in</a></li>
+      <li><a href="#dashboard"><span>02</span>Metrics dashboard</a></li>
+      <li><a href="#lived"><span>03</span>One person, first 30 days</a></li>
+      <li><a href="#volume"><span>04</span>How many pushes a day</a></li>
+      <li><a href="#content"><span>05</span>Which pushes to send</a></li>
+      <li><a href="#longrun"><span>06</span>What a 30-day test hides</a></li>
+      <li><a href="#layers"><span>07</span>What each layer adds</a></li>
+      <li><a href="#industry"><span>08</span>What the big apps do</a></li>
+      <li><a href="#method"><span>09</span>How the numbers are made</a></li>
     </ol>
   </div>
   <div class="card gloss">
     <div class="card-head">How to read the numbers</div>
     <dl>
+      <dt>DAU/MAU</dt><dd>Of the people active in the last 30 days, the share active today. The retention team's headline ratio.</dd>
+      <dt>Retained at day N</dt><dd>Share of the signup cohort active at least once in the 7 days ending on day N.</dd>
       <dt>Extra active days (lift)</dt><dd>Days a person was active that they would not have been without pushes. Same person, same random draws, no pushes.</dd>
-      <dt>Push on</dt><dd>Share of people who have not turned push off. It never comes back.</dd>
-      <dt>Reach days</dt><dd>Of 180 days, how many the average person could still be reached.</dd>
+      <dt>Push on / reachable</dt><dd>Share who have not turned push off. It never comes back. Reachable also counts people who still accept email.</dd>
+      <dt>Reach days</dt><dd>Of 180 days, how many the average person could still be reached by push.</dd>
       <dt>DND days</dt><dd>Days the person silenced the rest of the day after too many ignored pushes.</dd>
       <dt>Relevance bar</dt><dd>Minimum score, after the fatigue cost, a push needs to be sent.</dd>
     </dl>

@@ -55,3 +55,30 @@ def test_pick_breaks_ties_toward_more_permission():
     chosen, tied = pick(rs)
     tied_rs = [r for r in rs if r.policy.cap in tied]
     assert chosen.summary()["push_on_end"] == max(r.summary()["push_on_end"] for r in tied_rs)
+
+
+def test_email_only_reaches_people_who_turned_push_off():
+    r = simulate("minimalist", Policy("fatigue_aware", 5, 0.22, email=True), 800, 120, 9)
+    assert r.email_sends.sum() > 0
+    assert r.email_sends[r.push_on_end].sum() <= r.email_sends[~r.push_on_end].sum()
+    assert (r.push_on_end | r.email_on_end).mean() >= r.push_on_end.mean()
+
+
+def test_batching_does_not_raise_volume():
+    a = simulate("casual", Policy("fatigue_aware", 3, 0.3), N, DAYS, 10)
+    b = simulate("casual", Policy("fatigue_aware", 3, 0.3, batch=True), N, DAYS, 10)
+    assert b.sends.sum() <= a.sends.sum()
+
+
+def test_state_budget_sends_less_to_core_users():
+    a = simulate("contributor", Policy("fatigue_aware", 4, 0.3), N, 60, 11)
+    b = simulate("contributor", Policy("fatigue_aware", 4, 0.3, state_budget=True), N, 60, 11)
+    assert b.sends.sum() < a.sends.sum()
+
+
+def test_retention_metrics_are_shares():
+    r = simulate("casual", Policy("volume_first", 3), N, DAYS, 12)
+    s = r.summary()
+    for k in ("dau_mau_30", "dau_mau_end", "retained_d7", "retained_d30", "active_rate"):
+        assert 0 <= s[k] <= 1
+    assert r.base_active.mean() <= r.active.mean()
