@@ -136,8 +136,9 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .phones{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.note{grid-column:1/-1}
 @media (max-width:640px){.phones{grid-template-columns:1fr}}
 .phone-col{margin:0;min-width:0}
-figcaption{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-weight:600;font-size:14px}
-.pol-sub{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400}
+figcaption{display:block;margin-bottom:10px;font-weight:600;font-size:14px;min-height:54px}
+figcaption .dot{margin-right:8px;vertical-align:1px}
+.pol-sub{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400;line-height:1.4;margin-top:2px;min-height:31px}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
 .dot.sq{background:var(--sq)} .dot.rec{background:var(--rec)}
 

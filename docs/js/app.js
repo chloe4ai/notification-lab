@@ -276,7 +276,7 @@
     const L = D.lived[S.persona], rp = D.recs[S.persona].recommended_policy;
     $("sub-status_quo").textContent = "up to 5 a day, ranked by relevance";
     const layers = [rp.state_budget ? "state budget" : "", rp.batch ? "batching" : "", rp.email ? "email fallback" : ""].filter(Boolean).join(", ");
-    $("sub-recommended").textContent = `fatigue-aware, never more than ${rp.cap} a day${layers ? " · " + layers : ""}`;
+    $("sub-recommended").textContent = `fatigue-aware, up to ${rp.cap} a day${layers ? " · " + layers : ""}`;
     POLS.forEach((k) => {
       const days = L[k].days;
       $("strip-" + k).innerHTML = days.map((d) => {
