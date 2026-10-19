@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import numpy as np
 
 from nlab import params as P
@@ -5,6 +8,7 @@ from nlab.optimize import pick
 from nlab.sim import Policy, simulate
 
 N, DAYS = 300, 40
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_deterministic_for_a_seed():
@@ -54,7 +58,7 @@ def test_pick_breaks_ties_toward_more_permission():
     rs = [simulate("casual", Policy("fatigue_aware", c, 0.3), 400, 60, 8) for c in (2, 3, 4)]
     chosen, tied = pick(rs)
     tied_rs = [r for r in rs if r.policy.cap in tied]
-    assert chosen.summary()["push_on_end"] == max(r.summary()["push_on_end"] for r in tied_rs)
+    assert chosen.summary()["reachable_end"] == max(r.summary()["reachable_end"] for r in tied_rs)
 
 
 def test_email_only_reaches_people_who_turned_push_off():
@@ -89,3 +93,31 @@ def test_batching_respects_a_dropped_digest():
     allowed = tuple(k for k in P.TYPE_KEYS if k != "digest")
     r = simulate("casual", Policy("fatigue_aware", 4, 0.3, allowed=allowed, batch=True), 500, 60, 3)
     assert r.type_sends[P.TYPE_KEYS.index("digest")] == 0
+
+
+def test_baseline_uses_common_random_numbers():
+    # the no-push counterfactual must be the same organic visits whatever policy is run
+    none = simulate("casual", Policy("none"), N, DAYS, 13)
+    vf = simulate("casual", Policy("volume_first", 5), N, DAYS, 13)
+    assert np.array_equal(none.base_active, vf.base_active)
+
+
+def _readme_row(cells):
+    pushes, extra, _dau, _ret, push_on, reach = cells[2:8]
+    pct = lambda x: float(x.rstrip("%")) / 100
+    return {"sends_per_user_day": float(pushes), "incremental_active_days": float(extra.lstrip("+")),
+            "push_on_end": pct(push_on), "reachable_end": pct(reach)}
+
+
+def test_readme_results_match_published_data():
+    # the README results table is hand-written; keep it in step with docs/data/recommendations.json
+    v = json.loads((ROOT / "docs" / "data" / "recommendations.json").read_text())["minimalist"]["validation"]
+    lines = (ROOT / "README.md").read_text().splitlines()
+    i = next(k for k, ln in enumerate(lines) if ln.startswith("| Notification minimalist |"))
+    rows = {key: _readme_row([c.strip() for c in lines[i + j].strip().strip("|").split("|")])
+            for j, key in enumerate(("status_quo", "recommended"))}
+    # README rounds pushes/day to 2 decimals, extra days to 1, shares to whole percents
+    tol = {"sends_per_user_day": 0.005, "incremental_active_days": 0.05, "push_on_end": 0.005, "reachable_end": 0.005}
+    for key in ("status_quo", "recommended"):
+        for metric, t in tol.items():
+            assert abs(rows[key][metric] - v[key][metric]) <= t + 1e-9, (key, metric, rows[key][metric], v[key][metric])
