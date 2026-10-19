@@ -82,3 +82,10 @@ def test_retention_metrics_are_shares():
     for k in ("dau_mau_30", "dau_mau_end", "retained_d7", "retained_d30", "active_rate"):
         assert 0 <= s[k] <= 1
     assert r.base_active.mean() <= r.active.mean()
+
+
+def test_batching_respects_a_dropped_digest():
+    # batching must not re-enable the digest slot when the policy excludes digests
+    allowed = tuple(k for k in P.TYPE_KEYS if k != "digest")
+    r = simulate("casual", Policy("fatigue_aware", 4, 0.3, allowed=allowed, batch=True), 500, 60, 3)
+    assert r.type_sends[P.TYPE_KEYS.index("digest")] == 0

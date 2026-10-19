@@ -219,7 +219,8 @@ def simulate(persona: str, policy: Policy, n: int, days: int, seed: int,
             n_pool = pool_v.sum(1)
             top2 = np.sort(np.where(pool_v, rel, -np.inf), axis=1)[:, -2:]
             r_b = np.clip(top2.mean(1) + P.BATCH["bonus"], 0.02, 0.98)
-            fold = n_pool >= 2
+            # only fold when the digest itself is allowed; otherwise pool items go out individually
+            fold = (n_pool >= 2) & allowed[DIGEST]
             dslot = DIGEST * MAX_PER_TYPE
             rel[fold, dslot] = np.maximum(np.where(valid[fold, dslot], rel[fold, dslot], 0), r_b[fold])
             valid[fold, dslot] = True
