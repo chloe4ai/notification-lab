@@ -1,5 +1,7 @@
 # Notification Lab
 
+[![CI](https://github.com/chloe4ai/notification-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/chloe4ai/notification-lab/actions/workflows/ci.yml)
+
 **Live demo:** https://chloe4ai.github.io/notification-lab/
 
 Notifications as a retention channel. A cohort of new signups to a community app is simulated for 180 days under today's default push policy and a fatigue-aware one, and the site reports what a retention team cares about: logged-in DAU/MAU, day-N retention, and how many people can still be reached by push or email. It follows one person through their first month, push by push, and recommends how many notifications to send each day, which ones, and through which channel, for three kinds of users.
@@ -59,6 +61,8 @@ Reachable counts people who still have push on or still accept the email digest.
 The retention angle: a 30-day test cannot see this. For the minimalist, D30 retention is 87% under today's default and 88% under the recommended policy. By D90 it is 84% against 88%, because the default has burned most of its push permission by then.
 
 ## Run it
+
+Requires Python 3.12+ (the pinned numpy 2.5.4 needs it).
 
 ```bash
 pip install -r requirements.txt

@@ -2,12 +2,14 @@
 
     python scripts/generate.py            # full run (~2-4 minutes)
     python scripts/generate.py --quick    # small cohorts, for a smoke test
+    python scripts/generate.py --out DIR  # write somewhere other than docs/data/
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import json
+import platform
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,15 +82,15 @@ def events(persona, pols, w):
                                 int(d["push_on"] and not d["revoked_today"])])
 
 
-def main(quick: bool):
+def main(quick: bool, out: Path = OUT):
     n_tr = 400 if quick else P.USERS_PER_CONFIG
     n_va = 600 if quick else P.VALIDATION_USERS
     days = P.HORIZON_DAYS
-    OUT.mkdir(parents=True, exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(11)
     sq = Policy(P.STATUS_QUO["kind"], P.STATUS_QUO["cap"])
     recs, cohort, lived = {}, {}, {}
-    fh = open(OUT / "events_sample.csv", "w", newline="")
+    fh = open(out / "events_sample.csv", "w", newline="")
     w = csv.writer(fh)
     w.writerow(["persona", "policy", "person_id", "day", "time", "channel", "type", "relevance", "outcome",
                 "fatigue_after", "dnd_day", "push_on_end_of_day"])
@@ -173,6 +175,7 @@ def main(quick: bool):
     meta = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "horizon_days": days, "users_per_config": n_tr, "validation_users": n_va,
+        "numpy_version": np.__version__, "python_version": platform.python_version(),
         "train_seed": P.TRAIN_SEED, "validation_seed": P.VALIDATION_SEED,
         "status_quo": P.STATUS_QUO, "grid": {"caps": P.CAPS, "thresholds": P.THRESHOLDS, "uplift_thresholds": P.UPLIFT_THRESHOLDS},
         "email": P.EMAIL, "state": P.STATE, "batch": P.BATCH,
@@ -181,11 +184,13 @@ def main(quick: bool):
         "communities": P.COMMUNITIES,
     }
     for name, obj in (("meta", meta), ("recommendations", recs), ("cohort", cohort), ("lived", lived)):
-        (OUT / f"{name}.json").write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
-    print("wrote", OUT)
+        (out / f"{name}.json").write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+    print("wrote", out)
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
-    main(ap.parse_args().quick)
+    ap.add_argument("--out", type=Path, default=OUT, metavar="DIR", help="output directory (default: docs/data)")
+    args = ap.parse_args()
+    main(args.quick, args.out)
