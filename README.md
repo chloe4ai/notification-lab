@@ -20,7 +20,7 @@ This is the same problem as ad frequency capping: the marginal impression has a 
 |---|---|
 | Supply | Each day a person gets candidates: replies to their posts and comments (in proportion to how much they contribute), upvote milestones, trending posts in joined communities, a digest, recommended posts and community suggestions. |
 | Select | **Volume-first** sends the top *cap* by relevance. **Fatigue-aware** subtracts an irritation cost that grows with fatigue, lowers the ceiling as fatigue rises, and skips anything below a relevance bar. **Uplift-aware** scores by relevance × open chance × (1 − chance of visiting anyway), the Instagram idea. Optional layers on top: a per-state budget (half the cap for core users, lower bar for dormant ones, after Pinterest), batching (two or more feed items become one digest, after LinkedIn), and an email digest for people who turned push off. |
-| Respond | Open probability = relevance × (1 − fatigue) × willingness. Opens lower fatigue; ignores raise it. Past a personal threshold the rest of the day is Do Not Disturb. Fatigue also lowers unprompted visits; recent opens raise them. |
+| Respond | Open probability = relevance × (1 − fatigue) × willingness. Opens lower fatigue; ignores raise it. Past a personal threshold the rest of the day is Do Not Disturb. Pushes suppressed by Do Not Disturb are still counted in sends and pushes/day. Fatigue also lowers unprompted visits; recent opens raise them. |
 | Burn | Each day there is a small chance, growing with fatigue², that the person turns push off for good. Ignored emails carry their own unsubscribe chance. |
 | Measure | Lift = extra active days versus the **same person** receiving no pushes (common random numbers). |
 
@@ -56,7 +56,9 @@ Every chart has hover tooltips; the sidebar has a glossary of the metrics.
 |  | Fatigue-aware · cap 5 + batching + email | 2.79 | +29.8 | 77.6% | 100% | 94% | 99% |
 | | Logged-out look-alike (no pushes) | 0 | 0 | 60.8% | 99% | — | — |
 
-Reachable counts people who still have push on or still accept the email digest. The answer depends on the user. For minimalists, sending less wins outright on every metric. For active contributors, today's default is as good on six-month lift, and the gain is reach: 16 more people in 100 can still be pushed or emailed at day 180.
+"Reachable d180" counts people who still have push on or still accept the email digest. Today's default policy has no email digest, so for it reachable equals push on; the like-for-like comparison between the two policies is "Push on d180".
+
+The answer depends on the user. For minimalists, sending less wins outright on every metric. For active contributors, today's default is as good on six-month lift, and the gain is reach: 16 more people in 100 can still be pushed or emailed at day 180.
 
 The retention angle: a 30-day test cannot see this. For the minimalist, D30 retention is 87% under today's default and 88% under the recommended policy. By D90 it is 84% against 88%, because the default has burned most of its push permission by then.
 
