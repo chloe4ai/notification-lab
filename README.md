@@ -68,10 +68,12 @@ Requires Python 3.12+ (the pinned numpy 2.5.4 needs it).
 
 ```bash
 pip install -r requirements.txt
-python scripts/generate.py          # writes docs/data/, about 3 minutes
+python scripts/generate.py          # writes docs/data/, about half a minute on 8 cores
 python -m pytest -q
 python -m http.server -d docs 8000  # open http://localhost:8000
 ```
+
+The generator runs the simulations across all CPUs by default. Every simulation is seeded, so `--jobs 1` (one process, a few minutes) produces exactly the same files. `--quick` runs small cohorts as a smoke test.
 
 ## Layout
 

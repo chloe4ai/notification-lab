@@ -19,15 +19,24 @@ def tied_with(results: list[Result], best: dict) -> list[Result]:
             if r.summary()["incremental_active_days"] + r.summary()["ci95"] >= best["incremental_active_days"] - best["ci95"]]
 
 
-def ladder(persona: str, base: Policy, n: int, days: int, seed: int) -> list[Result]:
+def run_serial(persona: str, policies: list[Policy], n: int, days: int, seed: int) -> list[Result]:
+    """Simulate each policy in turn. generate.py passes a process-pool version with the same signature."""
+    return [simulate(persona, p, n, days, seed) for p in policies]
+
+
+def ladder_policies(base: Policy) -> list[Policy]:
+    """The operational layers added one at a time on top of the chosen cap and bar."""
+    return [base,
+            Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True),
+            Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True, batch=True),
+            Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True, batch=True, email=True),
+            Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, batch=True, email=True),
+            Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, email=True)]
+
+
+def ladder(persona: str, base: Policy, n: int, days: int, seed: int, run=run_serial) -> list[Result]:
     """Add the operational layers one at a time on top of the chosen cap and bar."""
-    steps = [base,
-             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True),
-             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True, batch=True),
-             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, state_budget=True, batch=True, email=True),
-             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, batch=True, email=True),
-             Policy(base.kind, base.cap, base.threshold, base.lam, base.allowed, email=True)]
-    return [simulate(persona, p, n, days, seed) for p in steps]
+    return run(persona, ladder_policies(base), n, days, seed)
 
 
 def pick(results: list[Result]) -> tuple[Result, list[int]]:
@@ -74,12 +83,17 @@ def content_mix(res: Result, ablation: dict | None = None) -> list[dict]:
     return rows
 
 
-def ablate(persona: str, pol: Policy, base: Result, n: int, days: int, seed: int) -> dict:
+def ablation_policies(pol: Policy) -> list[Policy]:
+    """One policy per notification type, with that type switched off (order follows P.TYPE_KEYS)."""
+    return [Policy(pol.kind, pol.cap, pol.threshold, pol.lam,
+                   tuple(x for x in P.TYPE_KEYS if x != k and (pol.allowed is None or x in pol.allowed)))
+            for k in P.TYPE_KEYS]
+
+
+def ablate(persona: str, pol: Policy, base: Result, n: int, days: int, seed: int, run=run_serial) -> dict:
     """Switch each type off in turn on the same people; paired difference in lift."""
     out = {}
-    for k in P.TYPE_KEYS:
-        allowed = tuple(x for x in P.TYPE_KEYS if x != k and (pol.allowed is None or x in pol.allowed))
-        r = simulate(persona, Policy(pol.kind, pol.cap, pol.threshold, pol.lam, allowed), n, days, seed)
+    for k, r in zip(P.TYPE_KEYS, run(persona, ablation_policies(pol), n, days, seed)):
         diff = r.incremental - base.incremental
         out[k] = (diff.mean(), 1.96 * diff.std(ddof=1) / np.sqrt(n))
     return out

@@ -1,17 +1,23 @@
 """Run the full pipeline and write the site's data files to docs/data/.
 
-    python scripts/generate.py            # full run (~2-4 minutes)
+    python scripts/generate.py            # full run, about half a minute on 8 cores
     python scripts/generate.py --quick    # small cohorts, for a smoke test
     python scripts/generate.py --out DIR  # write somewhere other than docs/data/
+    python scripts/generate.py --jobs 1   # one process (default: one per CPU)
+
+Every simulation is seeded, so the output does not depend on --jobs.
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import json
+import os
 import platform
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, timezone
+from itertools import repeat
 from pathlib import Path
 
 import numpy as np
@@ -20,11 +26,32 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from nlab import content, params as P  # noqa: E402
-from nlab.optimize import ablate, content_mix, grid_policies, ladder, pick  # noqa: E402
+from nlab.optimize import ablate, content_mix, grid_policies, ladder, pick, run_serial  # noqa: E402
 from nlab.sim import Policy, simulate  # noqa: E402
 
 OUT = ROOT / "docs" / "data"
 LIVED_PEOPLE, LIVED_DAYS, EVENT_PEOPLE = 400, 30, 40
+
+
+class Runner:
+    """Simulate a list of policies, across processes when jobs > 1.
+
+    Each simulation is independent and fully seeded, so running them in
+    parallel changes nothing but the wall-clock time. Results come back in
+    the order the policies were given.
+    """
+
+    def __init__(self, jobs: int):
+        self.pool = ProcessPoolExecutor(jobs) if jobs > 1 else None
+
+    def __call__(self, persona, policies, n, days, seed):
+        if self.pool is None:
+            return run_serial(persona, policies, n, days, seed)
+        return list(self.pool.map(simulate, repeat(persona), policies, repeat(n), repeat(days), repeat(seed)))
+
+    def close(self):
+        if self.pool is not None:
+            self.pool.shutdown()
 
 
 def row(res, extra=None):
@@ -82,7 +109,7 @@ def events(persona, pols, w):
                                 int(d["push_on"] and not d["revoked_today"])])
 
 
-def main(quick: bool, out: Path = OUT):
+def main(quick: bool, out: Path = OUT, jobs: int = 1):
     n_tr = 400 if quick else P.USERS_PER_CONFIG
     n_va = 600 if quick else P.VALIDATION_USERS
     days = P.HORIZON_DAYS
@@ -90,87 +117,16 @@ def main(quick: bool, out: Path = OUT):
     rng = np.random.default_rng(11)
     sq = Policy(P.STATUS_QUO["kind"], P.STATUS_QUO["cap"])
     recs, cohort, lived = {}, {}, {}
-    fh = open(out / "events_sample.csv", "w", newline="")
-    w = csv.writer(fh)
-    w.writerow(["persona", "policy", "person_id", "day", "time", "channel", "type", "relevance", "outcome",
-                "fatigue_after", "dnd_day", "push_on_end_of_day"])
-
-    for persona in P.PERSONAS:
-        print(f"[{persona}] grid search", flush=True)
-        results = [simulate(persona, pol, n_tr, days, P.TRAIN_SEED) for pol in grid_policies()]
-        vf = [r for r in results if r.policy.kind == "volume_first"]
-        fa = [r for r in results if r.policy.kind == "fatigue_aware"]
-        up = [r for r in results if r.policy.kind == "uplift_aware"]
-        best_fa, tied = pick(fa)
-        best_vf, _ = pick(vf)
-        best_up, _ = pick(up)
-        sq_tr = next(r for r in vf if r.policy.cap == sq.cap)
-
-        print(f"[{persona}] operational layers", flush=True)
-        lad = ladder(persona, best_fa.policy, n_tr, days, P.TRAIN_SEED)
-        best_layered, _ = pick(lad)
-
-        print(f"[{persona}] content ablation", flush=True)
-        abl = ablate(persona, best_fa.policy, best_fa, n_tr, days, P.TRAIN_SEED)
-        abl_sq = ablate(persona, sq, sq_tr, n_tr, days, P.TRAIN_SEED)
-        mix = content_mix(best_fa, abl)
-        dropped = [m["type"] for m in mix if m["rule"] == "drop"]
-        allowed = tuple(k for k in P.TYPE_KEYS if k not in dropped)
-        lp = best_layered.policy
-        rec = Policy("fatigue_aware", best_fa.policy.cap, best_fa.policy.threshold, P.LAMBDA,
-                     None if not dropped else allowed,
-                     state_budget=lp.state_budget, batch=lp.batch, email=lp.email)
-
-        print(f"[{persona}] validation on a fresh cohort", flush=True)
-        v = {}
-        core = Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed)
-        val_pols = [("none", Policy("none")), ("status_quo", sq), ("best_volume_first", best_vf.policy),
-                    ("best_fatigue_aware", best_fa.policy), ("recommended", rec), ("uplift_aware", best_up.policy),
-                    ("layer_core", core),
-                    ("layer_state", Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed, state_budget=rec.state_budget)),
-                    ("layer_batch", Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed, state_budget=rec.state_budget, batch=rec.batch)),
-                    ("layer_email", rec)]
-        cohort_runs = {}
-        for key, pol in val_pols:
-            r = simulate(persona, pol, n_va, days, P.VALIDATION_SEED)
-            v[key] = {"policy": pol.name + (" · content rules" if key == "recommended" and dropped else ""),
-                      **r.summary()}
-            cohort_runs[key] = r
-        c_sq, c_rec = cohort_runs["status_quo"], cohort_runs["recommended"]
-
-        recs[persona] = {
-            "grid": [row(r) for r in results],
-            "best": row(best_fa), "best_volume_first": row(best_vf),
-            "tied_caps": tied,
-            "content_mix": mix,
-            "content_mix_status_quo": content_mix(sq_tr, abl_sq),
-            "recommended_policy": {"kind": "fatigue_aware", "cap": rec.cap, "lam": rec.lam,
-                                   "threshold": rec.threshold, "allowed": list(allowed), "dropped": dropped,
-                                   "state_budget": rec.state_budget, "batch": rec.batch, "email": rec.email},
-            "ladder_train": [row(r) for r in lad],
-            "validation": v,
-        }
-        r4 = lambda a: [round(float(x), 4) for x in a]
-        cohort[persona] = {
-            k: {"push_on": r4(r.daily_push_on),
-                "incremental_dau": [round(float(x) * 100, 3) for x in r.daily_incremental],
-                "active": r4(r.active.mean(0)),
-                "dau_mau": r4(r.dau_mau(r.active)),
-                "retained": {str(d): round(r.retained(r.active, d), 4) for d in (1, 7, 14, 30, 60, 90, 120, 150, 180) if d <= days}}
-            for k, r in (("status_quo", c_sq), ("recommended", c_rec), ("uplift_aware", cohort_runs["uplift_aware"]))
-        }
-        # logged-out look-alike: the same people with organic visits only
-        base = cohort_runs["none"]
-        cohort[persona]["none"] = {"active": r4(base.active.mean(0)), "dau_mau": r4(base.dau_mau(base.active)),
-                                   "retained": {str(d): round(base.retained(base.active, d), 4) for d in (1, 7, 14, 30, 60, 90, 120, 150, 180) if d <= days}}
-        print(f"[{persona}] lived experience + events", flush=True)
-        lived[persona] = lived_view(persona, sq, rec, rng)
-        events(persona, {"status_quo": sq, "recommended": rec}, w)
-        s, rv = v["status_quo"], v["recommended"]
-        print(f"[{persona}] {rec.name} | lift {s['incremental_active_days']} -> {rv['incremental_active_days']} | "
-              f"push on {s['push_on_end']} -> {rv['push_on_end']} | reachable {rv['reachable_end']} | "
-              f"DAU/MAU {s['dau_mau_end']} -> {rv['dau_mau_end']}", flush=True)
-    fh.close()
+    run = Runner(jobs)
+    try:
+        with open(out / "events_sample.csv", "w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["persona", "policy", "person_id", "day", "time", "channel", "type", "relevance", "outcome",
+                        "fatigue_after", "dnd_day", "push_on_end_of_day"])
+            for persona in P.PERSONAS:
+                persona_step(persona, sq, n_tr, n_va, days, run, rng, w, recs, cohort, lived)
+    finally:
+        run.close()
 
     meta = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -188,9 +144,88 @@ def main(quick: bool, out: Path = OUT):
     print("wrote", out)
 
 
+def persona_step(persona, sq, n_tr, n_va, days, run, rng, w, recs, cohort, lived):
+    """Grid search, layers, ablation, validation and the lived view for one persona."""
+    print(f"[{persona}] grid search", flush=True)
+    results = run(persona, grid_policies(), n_tr, days, P.TRAIN_SEED)
+    vf = [r for r in results if r.policy.kind == "volume_first"]
+    fa = [r for r in results if r.policy.kind == "fatigue_aware"]
+    up = [r for r in results if r.policy.kind == "uplift_aware"]
+    best_fa, tied = pick(fa)
+    best_vf, _ = pick(vf)
+    best_up, _ = pick(up)
+    sq_tr = next(r for r in vf if r.policy.cap == sq.cap)
+
+    print(f"[{persona}] operational layers", flush=True)
+    lad = ladder(persona, best_fa.policy, n_tr, days, P.TRAIN_SEED, run=run)
+    best_layered, _ = pick(lad)
+
+    print(f"[{persona}] content ablation", flush=True)
+    abl = ablate(persona, best_fa.policy, best_fa, n_tr, days, P.TRAIN_SEED, run=run)
+    abl_sq = ablate(persona, sq, sq_tr, n_tr, days, P.TRAIN_SEED, run=run)
+    mix = content_mix(best_fa, abl)
+    dropped = [m["type"] for m in mix if m["rule"] == "drop"]
+    allowed = tuple(k for k in P.TYPE_KEYS if k not in dropped)
+    lp = best_layered.policy
+    rec = Policy("fatigue_aware", best_fa.policy.cap, best_fa.policy.threshold, P.LAMBDA,
+                 None if not dropped else allowed,
+                 state_budget=lp.state_budget, batch=lp.batch, email=lp.email)
+
+    print(f"[{persona}] validation on a fresh cohort", flush=True)
+    v = {}
+    core = Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed)
+    val_pols = [("none", Policy("none")), ("status_quo", sq), ("best_volume_first", best_vf.policy),
+                ("best_fatigue_aware", best_fa.policy), ("recommended", rec), ("uplift_aware", best_up.policy),
+                ("layer_core", core),
+                ("layer_state", Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed, state_budget=rec.state_budget)),
+                ("layer_batch", Policy("fatigue_aware", rec.cap, rec.threshold, P.LAMBDA, rec.allowed, state_budget=rec.state_budget, batch=rec.batch)),
+                ("layer_email", rec)]
+    cohort_runs = {}
+    for (key, pol), r in zip(val_pols, run(persona, [pol for _, pol in val_pols], n_va, days, P.VALIDATION_SEED)):
+        v[key] = {"policy": pol.name + (" · content rules" if key == "recommended" and dropped else ""),
+                  **r.summary()}
+        cohort_runs[key] = r
+    c_sq, c_rec = cohort_runs["status_quo"], cohort_runs["recommended"]
+
+    recs[persona] = {
+        "grid": [row(r) for r in results],
+        "best": row(best_fa), "best_volume_first": row(best_vf),
+        "tied_caps": tied,
+        "content_mix": mix,
+        "content_mix_status_quo": content_mix(sq_tr, abl_sq),
+        "recommended_policy": {"kind": "fatigue_aware", "cap": rec.cap, "lam": rec.lam,
+                               "threshold": rec.threshold, "allowed": list(allowed), "dropped": dropped,
+                               "state_budget": rec.state_budget, "batch": rec.batch, "email": rec.email},
+        "ladder_train": [row(r) for r in lad],
+        "validation": v,
+    }
+    r4 = lambda a: [round(float(x), 4) for x in a]
+    cohort[persona] = {
+        k: {"push_on": r4(r.daily_push_on),
+            "incremental_dau": [round(float(x) * 100, 3) for x in r.daily_incremental],
+            "active": r4(r.active.mean(0)),
+            "dau_mau": r4(r.dau_mau(r.active)),
+            "retained": {str(d): round(r.retained(r.active, d), 4) for d in (1, 7, 14, 30, 60, 90, 120, 150, 180) if d <= days}}
+        for k, r in (("status_quo", c_sq), ("recommended", c_rec), ("uplift_aware", cohort_runs["uplift_aware"]))
+    }
+    # logged-out look-alike: the same people with organic visits only
+    base = cohort_runs["none"]
+    cohort[persona]["none"] = {"active": r4(base.active.mean(0)), "dau_mau": r4(base.dau_mau(base.active)),
+                               "retained": {str(d): round(base.retained(base.active, d), 4) for d in (1, 7, 14, 30, 60, 90, 120, 150, 180) if d <= days}}
+    print(f"[{persona}] lived experience + events", flush=True)
+    lived[persona] = lived_view(persona, sq, rec, rng)
+    events(persona, {"status_quo": sq, "recommended": rec}, w)
+    s, rv = v["status_quo"], v["recommended"]
+    print(f"[{persona}] {rec.name} | lift {s['incremental_active_days']} -> {rv['incremental_active_days']} | "
+          f"push on {s['push_on_end']} -> {rv['push_on_end']} | reachable {rv['reachable_end']} | "
+          f"DAU/MAU {s['dau_mau_end']} -> {rv['dau_mau_end']}", flush=True)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--out", type=Path, default=OUT, metavar="DIR", help="output directory (default: docs/data)")
+    ap.add_argument("--jobs", type=int, default=os.cpu_count() or 1, metavar="N",
+                    help="worker processes for the simulations (default: one per CPU)")
     args = ap.parse_args()
-    main(args.quick, args.out)
+    main(args.quick, args.out, max(1, args.jobs))

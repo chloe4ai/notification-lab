@@ -46,10 +46,12 @@
 
   /* ---------- shared hover tooltip: any element with data-tip ---------- */
   const tip = $("tip");
+  let tipFor = null;   // element whose tip is showing, so moving within it does not rewrite the tooltip
   document.addEventListener("mousemove", (e) => {
     const t = e.target.closest && e.target.closest("[data-tip]");
-    if (!t) { tip.hidden = true; return; }
-    tip.innerHTML = t.dataset.tip; tip.hidden = false;
+    if (!t) { tip.hidden = true; tipFor = null; return; }
+    if (t !== tipFor) { tip.innerHTML = t.dataset.tip; tipFor = t; }
+    tip.hidden = false;
     const w = tip.offsetWidth, h = tip.offsetHeight;
     let x = e.clientX + 14, y = e.clientY + 14;
     if (x + w > innerWidth - 8) x = e.clientX - w - 14;
@@ -83,7 +85,7 @@
     $("persona-blurb").textContent = p.blurb;
     $("gen-at").textContent = "Data generated " + D.meta.generated_at.replace("T", " ").replace("+00:00", " UTC");
     $("day").value = S.day;
-    renderKpis(); renderFunnel(); renderDashboard(); renderLivedStatic(); renderDay(); renderVolume(); renderMix(); renderLongrun(); renderLadder(); renderCharts(); renderData();
+    renderKpis(); renderFunnel(); renderDashboard(); renderLivedStatic(); renderDay(); renderVolume(); renderMix(); renderLongrun(); renderCharts(); renderData();
   }
 
   /* ---------- hero KPIs: the retention team's numbers ---------- */
@@ -536,6 +538,7 @@
   }
   function renderCharts() {
     if (!D) return;
+    // renderLadder is here rather than in renderAll because it reads theme colours and must redraw on a scheme change
     drawVolume(); drawCumulative(); drawHeat(); drawFrontier(); drawDauMau(); renderLadder();
     const C = D.cohort[S.persona], cSq = css("--sq"), cRec = css("--rec");
     lineChart("chart-perm", [{ data: C.status_quo.push_on, color: cSq, name: "Today's default" }, { data: C.recommended.push_on, color: cRec, name: "Recommended" }],

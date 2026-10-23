@@ -81,13 +81,13 @@ class Result:
     # --- retention metrics on the active matrix ---
     @staticmethod
     def dau_mau(active: np.ndarray, window: int = 30) -> np.ndarray:
+        """DAU over MAU per day: share active today / share active in the `window` days ending today."""
         n, days = active.shape
-        out = np.zeros(days)
-        for t in range(days):
-            lo = max(0, t - window + 1)
-            mau = active[:, lo:t + 1].any(1).mean()
-            out[t] = active[:, t].mean() / mau if mau > 0 else 0.0
-        return out
+        cs = np.cumsum(active, axis=1, dtype=np.int64)
+        in_window = cs - np.pad(cs, ((0, 0), (window, 0)))[:, :days]   # active days in the trailing window
+        mau = (in_window > 0).mean(0)
+        dau = active.mean(0)
+        return np.divide(dau, mau, out=np.zeros(days), where=mau > 0)
 
     @staticmethod
     def retained(active: np.ndarray, day: int, window: int = 7) -> float:
@@ -217,7 +217,7 @@ def simulate(persona: str, policy: Policy, n: int, days: int, seed: int,
             pool_slot = IS_POOL[SLOT_TYPE] & ~is_digest[SLOT_TYPE]
             pool_v = valid & pool_slot[None, :]
             n_pool = pool_v.sum(1)
-            top2 = np.sort(np.where(pool_v, rel, -np.inf), axis=1)[:, -2:]
+            top2 = np.partition(np.where(pool_v, rel, -np.inf), -2, axis=1)[:, -2:]
             r_b = np.clip(top2.mean(1) + P.BATCH["bonus"], 0.02, 0.98)
             # only fold when the digest itself is allowed; otherwise pool items go out individually
             fold = (n_pool >= 2) & allowed[DIGEST]
@@ -272,10 +272,10 @@ def simulate(persona: str, policy: Policy, n: int, days: int, seed: int,
             op, ig = respond(ok, t_idx, r, s, "push")
             sends += ok
             opens += op
-            np.add.at(ts, t_idx[ok], 1)
-            np.add.at(to, t_idx[op], 1)
-            np.add.at(ti, t_idx[ig], 1)
-            np.add.at(tv, t_idx[op], VALUE[t_idx[op]])
+            ts += np.bincount(t_idx[ok], minlength=T)
+            to += np.bincount(t_idx[op], minlength=T)
+            ti += np.bincount(t_idx[ig], minlength=T)
+            tv += np.bincount(t_idx[op], weights=VALUE[t_idx[op]], minlength=T)
             rel_m[rows[ok], pick[ok]] = -np.inf
 
         # --- email digest for people who turned push off ---
